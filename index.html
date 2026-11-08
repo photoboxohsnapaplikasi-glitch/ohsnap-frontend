@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OH SNAP! Photobox - Capture Your Fun Moments</title>
+    <meta name="description" content="OH SNAP! Photobox - Photobox & Self-Photo Studio kekinian di berbagai pusat perbelanjaan Indonesia.">
+    <link rel="icon" type="image/jpeg" href="images/logo-icon.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            try {
+                const raw = localStorage.getItem('ohsnap_cms_data');
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    if (saved && saved.colors) {
+                        const r = document.documentElement.style;
+                        if (saved.colors.primary) r.setProperty('--primary', saved.colors.primary);
+                        if (saved.colors.secondary) r.setProperty('--secondary', saved.colors.secondary);
+                        if (saved.colors.bg) r.setProperty('--bg-main', saved.colors.bg);
+                        if (saved.colors.footer) r.setProperty('--footer-bg', saved.colors.footer);
+                    }
+                } else {
+                    // Pengunjung baru pertama kali (localStorage kosong): tahan render teks default sampai data Cloud masuk
+                    document.documentElement.classList.add('awaiting-first-cloud');
+                    setTimeout(() => document.documentElement.classList.remove('awaiting-first-cloud'), 700);
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        :root { --primary: #ff1493; --secondary: #2b4c7e; --bg-main: #fff0f5; --footer-bg: #18171d; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-main); color: var(--secondary); line-height: 1.6; overflow-x: hidden; }
+        html.awaiting-first-cloud .hero-banner-content,
+        html.awaiting-first-cloud .about-section,
+        html.awaiting-first-cloud .section-wrap { opacity: 0; }
+        .hero-banner-content, .about-section, .section-wrap { transition: opacity 0.15s ease; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; height: 85px; padding: 0 4%; background: var(--primary); position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .logo-container { display: flex; align-items: center; gap: 12px; text-decoration: none; z-index: 1001; }
+        .brand-logo-img { width: 42px; height: 42px; object-fit: contain; border-radius: 50%; border: 2px solid #fff; }
+        .logo { font-size: 1.4rem; font-weight: 800; letter-spacing: 2px; color: #fff; }
+        .logo span { color: #ffe4e6; }
+        .nav-container { display: flex; align-items: center; gap: 25px; }
+        .nav-menu { display: flex; align-items: center; gap: 24px; }
+        .nav-menu a { color: #fff; text-decoration: none; font-size: 1rem; font-weight: 500; opacity: 0.9; transition: 0.3s; }
+        .nav-menu a:hover, .nav-menu a.active { opacity: 1; font-weight: 700; }
+        .lang-switcher { display: flex; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 50px; padding: 2px; }
+        .lang-btn { background: transparent; border: none; color: #fff; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 50px; }
+        .lang-btn.active { background: #fff; color: var(--primary); }
+        .menu-toggle { display: none; flex-direction: column; justify-content: space-between; width: 28px; height: 21px; background: transparent; border: none; cursor: pointer; z-index: 1001; }
+        .menu-toggle span { display: block; width: 100%; height: 3px; background-color: #fff; border-radius: 2px; }
+
+        /* HERO BANNER UTAMA */
+        .hero-banner-section {
+            position: relative; width: 100%; height: 480px;
+            background-color: #18171d;
+            background-size: cover; background-position: center;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center; color: #fff; padding: 0 20px;
+        }
+        .hero-banner-section::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.45); z-index: 1;
+        }
+        .hero-banner-content { position: relative; z-index: 2; max-width: 900px; }
+        .hero-banner-content h1 { font-size: 3.2rem; font-weight: 800; letter-spacing: 1px; line-height: 1.2; margin-bottom: 15px; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .hero-banner-content h1 span { color: #ff69b4; }
+        .hero-banner-content p { font-size: 1.15rem; margin-bottom: 25px; opacity: 0.95; }
+        .btn-hero-action { display: inline-block; background: transparent; color: #fff; border: 2px solid #fff; padding: 12px 30px; border-radius: 50px; font-weight: 700; text-decoration: none; transition: 0.3s; }
+        .btn-hero-action:hover { background: #fff; color: var(--secondary); }
+
+        /* ABOUT / STORY SEJAJAR */
+        .about-section { max-width: 1250px; margin: 60px auto; padding: 0 5%; }
+        .about-grid-container {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 50px;
+            align-items: center;
+        }
+        .about-text-box { display: flex; flex-direction: column; justify-content: center; }
+        .about-text-box h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 15px; color: var(--secondary); }
+        .about-text-box h1 span { color: var(--primary); }
+        .about-text-box p { font-size: 1.02rem; color: #4b5563; margin-bottom: 25px; text-align: left; line-height: 1.7; overflow-wrap: break-word; }
+        .btn-readmore { 
+            display: inline-block; background: var(--primary); color: #fff; padding: 12px 32px; 
+            border-radius: 50px; text-decoration: none; font-weight: 700; box-shadow: 0 6px 20px rgba(255,20,147,0.3); 
+            transition: 0.3s; width: fit-content;
+        }
+        .btn-readmore:hover { transform: translateY(-2px); }
+
+        .about-img-box {
+            width: 100%; height: 350px; border-radius: 20px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); background: #fff; border: 2px solid #fbcfe8;
+        }
+        .about-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; }
+
+        /* KOTAK PLACEHOLDER PORTRAIT 9:16 PENUH */
+        .empty-portrait-box {
+            width: 100%; height: 460px; background: #ffffff; border: 2px solid #fbcfe8; border-radius: 20px;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255, 182, 193, 0.15);
+        }
+        .empty-portrait-video {
+            width: 100%; height: 480px; background: #ffffff; border: 2px solid #fbcfe8; border-radius: 24px;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(255, 182, 193, 0.18);
+        }
+
+        .section-wrap { max-width: 1250px; margin: 60px auto; padding: 0 5%; }
+        .section-head { text-align: center; margin-bottom: 35px; }
+        .section-head h2 { font-size: 2.2rem; font-weight: 800; color: var(--secondary); margin-bottom: 8px; }
+        .section-head h2 span { color: var(--primary); }
+        .section-head p { color: #6b7280; font-size: 1rem; }
+
+        /* SISTEM SLIDER / CAROUSEL */
+        .slider-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .slider-container {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            width: 100%;
+            padding: 10px 0;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .slider-container::-webkit-scrollbar { display: none; }
+
+        .slide-item-studio { flex: 0 0 calc((100% - 48px) / 4); min-width: 240px; }
+        .slide-item-promo { flex: 0 0 calc((100% - 32px) / 3); min-width: 280px; }
+        .slide-item-video { flex: 0 0 calc((100% - 64px) / 5); min-width: 195px; }
+
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 1.4rem;
+            font-weight: 800;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(255,20,147,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .slider-btn:hover { background: #e00d7f; transform: translateY(-50%) scale(1.05); }
+        .slider-btn-left { left: -22px; }
+        .slider-btn-right { right: -22px; }
+
+        .card-item { background: #fff; border: 1px solid #fbcfe8; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 25px rgba(255,182,193,0.18); display: flex; flex-direction: column; height: 100%; }
+        .card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .badge-tag { display: inline-block; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 12px; border-radius: 50px; margin-bottom: 10px; width: fit-content; }
+        .card-body h3 { font-size: 1.2rem; font-weight: 700; color: var(--secondary); margin-bottom: 8px; }
+        .card-body p { font-size: 0.92rem; color: #4b5563; }
+
+        footer { background-color: var(--footer-bg); color: #d1d5db; padding: 65px 6% 28px; border-top: 2px solid #fbcfe8; margin-top: 60px; }
+        .footer-content { max-width: 1300px; margin: 0 auto; display: grid; grid-template-columns: auto 1.15fr 1.15fr; gap: 45px; align-items: flex-start; }
+        .footer-brand-col { display: flex; align-items: center; gap: 12px; text-decoration: none; margin-top: 2px; }
+        .footer-brand-col img { width: 58px; height: 58px; object-fit: contain; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
+        .footer-brand-col .footer-logo-text { font-size: 1.45rem; font-weight: 800; letter-spacing: 2px; color: #fff; white-space: nowrap; }
+        .footer-brand-col .footer-logo-text span { color: var(--primary); }
+        .footer-left h3 { color: #ffffff; font-size: 1.25rem; font-weight: 700; margin-bottom: 18px; letter-spacing: 0.2px; }
+        .footer-info-row { display: flex; align-items: flex-start; gap: 12px; font-style: normal; font-size: 0.94rem; line-height: 1.65; margin-bottom: 14px; color: #d1d5db; }
+        .footer-info-row strong { color: #ffffff; font-weight: 700; }
+        .footer-item-icon { width: 18px; height: 18px; fill: #d1d5db; flex-shrink: 0; margin-top: 4px; }
+        .footer-left a { color: #d1d5db; text-decoration: none; transition: color 0.2s ease; }
+        .footer-left a:hover { color: #ffffff; text-decoration: underline; }
+        .footer-helpdesk { margin-top: 24px; }
+        .footer-helpdesk h4 { color: #ffffff; font-size: 1.15rem; font-weight: 700; margin-bottom: 10px; }
+        .footer-helpdesk ul { list-style: none; padding: 0; }
+        .footer-helpdesk li { margin-bottom: 8px; font-size: 0.95rem; }
+        .footer-helpdesk a { color: #d1d5db; text-decoration: none; transition: color 0.2s ease; }
+        .footer-helpdesk a:hover { color: #ffffff; text-decoration: underline; }
+        .footer-map-col { display: flex; flex-direction: column; width: 100%; }
+        .footer-map-heading { color: #ffffff; font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; }
+        .footer-map-box { position: relative; width: 100%; height: 245px; border-radius: 14px; overflow: hidden; background: #e5e7eb; box-shadow: 0 10px 28px rgba(0,0,0,0.35); cursor: pointer; border: 1px solid rgba(255,255,255,0.14); }
+        .footer-map-iframe { width: 100%; height: 100%; border: 0; display: block; filter: contrast(1.02); }
+        .footer-map-click-layer { position: absolute; inset: 0; z-index: 3; background: transparent; }
+        .footer-map-overlay-card { position: absolute; top: 12px; left: 12px; z-index: 4; background: #ffffff; color: #1f2937; border-radius: 10px; padding: 12px 14px; max-width: 255px; box-shadow: 0 4px 16px rgba(0,0,0,0.22); pointer-events: none; }
+        .map-card-title { font-size: 0.92rem; font-weight: 800; color: #111827; margin-bottom: 2px; line-height: 1.3; }
+        .map-card-sub { font-size: 0.76rem; color: #6b7280; margin-bottom: 6px; line-height: 1.35; }
+        .map-card-rating { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: #374151; margin-bottom: 10px; }
+        .map-card-rating .stars { color: #f59e0b; letter-spacing: 1px; }
+        .map-card-actions { display: flex; align-items: center; gap: 8px; }
+        .btn-open-maps { display: inline-flex; align-items: center; gap: 6px; background: #1a73e8; color: #ffffff; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(26,115,232,0.35); }
+        .btn-dir-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #1a73e8; color: #ffffff; flex-shrink: 0; }
+        .footer-map-box:hover .btn-open-maps { background: #1557b0; }
+        .footer-bottom { max-width: 1300px; margin: 45px auto 0; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 0.85rem; color: #9ca3af; }
+        .footer-bottom-socials { display: flex; align-items: center; gap: 10px; }
+        .footer-social-circle { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35); display: inline-flex; align-items: center; justify-content: center; color: #ffffff; text-decoration: none; transition: 0.25s; }
+        .footer-social-circle:hover { background: var(--primary); border-color: var(--primary); transform: translateY(-2px); }
+        .footer-social-circle svg { width: 16px; height: 16px; fill: currentColor; }
+
+        @media screen and (max-width: 1024px) {
+            .slide-item-studio { flex: 0 0 calc((100% - 32px) / 3); }
+            .slide-item-promo { flex: 0 0 calc((100% - 16px) / 2); }
+            .slide-item-video { flex: 0 0 calc((100% - 32px) / 3); }
+        }
+        @media screen and (max-width: 768px) {
+            .menu-toggle { display: flex; }
+            .nav-container { position: fixed; top: 0; left: -100%; width: 260px; height: 100vh; background: #fff; flex-direction: column; align-items: flex-start; padding: 90px 25px; transition: 0.3s; z-index: 999; box-shadow: 10px 0 30px rgba(0,0,0,0.1); }
+            .nav-container.active { left: 0; }
+            .nav-menu { flex-direction: column; width: 100%; }
+            .nav-menu a { color: var(--secondary); padding: 14px 0; border-bottom: 1px solid #f3f4f6; width: 100%; }
+            .lang-switcher { width: 100%; justify-content: center; background: #fdf2f8; border: 1px solid #fbcfe8; padding: 6px; }
+            .lang-btn { color: var(--secondary); width: 50%; text-align: center; }
+            .lang-btn.active { background: var(--primary); color: #ffffff; }
+            .hero-banner-section { height: 350px; }
+            .hero-banner-content h1 { font-size: 2.1rem; }
+            .about-grid-container { grid-template-columns: 1fr; }
+            .slide-item-studio, .slide-item-promo, .slide-item-video { flex: 0 0 82%; }
+            .slider-btn { width: 35px; height: 35px; font-size: 1.1rem; }
+            .slider-btn-left { left: -10px; }
+            .slider-btn-right { right: -10px; }
+            .footer-content { grid-template-columns: 1fr; gap: 30px; }
+            .footer-bottom { flex-direction: column; text-align: center; justify-content: center; }
+        }
+
+        /* Tombol Link saat Video Dipause/Stop & Proteksi Download */
+        .video-card-wrap {
+            position: relative; width: 100%; height: 480px; border-radius: 24px; overflow: hidden;
+        }
+        .video-pause-link-btn {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 20, 147, 0.92); color: #ffffff; padding: 11px 22px;
+            border-radius: 50px; font-weight: 800; font-size: 0.88rem; text-decoration: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); border: 2px solid #ffffff;
+            z-index: 5; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+            transition: opacity 0.25s ease, transform 0.2s ease;
+        }
+        .video-pause-link-btn:hover {
+            background: #e00d7f; transform: translate(-50%, -52%) scale(1.04);
+        }
+        .video-card-wrap.is-playing .video-pause-link-btn {
+            opacity: 0; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo-container">
+            <img src="images/logo-icon.jpg" alt="OH SNAP! Logo" class="brand-logo-img" onerror="this.style.display='none'">
+            <span class="logo">OH SNAP<span>!</span></span>
+        </a>
+        <button class="menu-toggle" id="menuToggle" aria-label="Menu Navigasi"><span></span><span></span><span></span></button>
+        <div class="nav-container" id="navContainer">
+            <nav class="nav-menu">
+                <a href="index.html" class="active" data-en="Home" data-id="Halaman">Halaman</a>
+                <a href="layanan.html" data-en="Services" data-id="Layanan">Layanan</a>
+                <a href="frame.html" data-en="Frame" data-id="Frame">Frame</a>
+                <a href="lokasi.html" data-en="Locations" data-id="Lokasi">Lokasi</a>
+                <a href="resend.html" data-en="Resend Softcopy" data-id="Resend Softcopy">Resend Softcopy</a>
+                <a href="kontak.html" data-en="Contact" data-id="Kontak">Kontak</a>
+            </nav>
+            <div class="lang-switcher">
+                <button class="lang-btn" id="btnEN" onclick="setLanguage('en')">EN</button>
+                <button class="lang-btn active" id="btnID" onclick="setLanguage('id')">ID</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero-banner-section" id="heroBannerBg">
+        <div class="hero-banner-content">
+            <h1 id="heroTitle"></h1>
+            <p id="heroSub"></p>
+            <a href="lokasi.html" class="btn-hero-action" data-en="Check our locations!" data-id="Cek Lokasi Kami!">Cek Lokasi Kami!</a>
+        </div>
+    </section>
+
+    <section class="about-section">
+        <div class="about-grid-container">
+            <div class="about-text-box">
+                <h1 id="aboutTitle"></h1>
+                <p id="aboutSub"></p>
+                <a href="story.html" class="btn-readmore" id="aboutBtn">Read more →</a>
+            </div>
+            <div class="about-img-box">
+                <img id="aboutImg" alt="Our Story Photo" onload="this.style.opacity='1'" onerror="this.style.opacity='0'">
+            </div>
+        </div>
+    </section>
+
+    <!-- SUASANA STUDIO -->
+    <section class="section-wrap">
+        <div class="section-head">
+            <h2 id="secStudioTitle"></h2>
+            <p id="secStudioSub"></p>
+        </div>
+        <div class="slider-wrapper">
+            <button class="slider-btn slider-btn-left" onclick="scrollSlider('studioGrid', -1)">&#10094;</button>
+            <div id="studioGrid" class="slider-container"></div>
+            <button class="slider-btn slider-btn-right" onclick="scrollSlider('studioGrid', 1)">&#10095;</button>
+        </div>
+    </section>
+
+    <!-- PROMO SPESIAL -->
+    <section class="section-wrap">
+        <div class="section-head">
+            <h2 id="secPromoTitle"></h2>
+            <p id="secPromoSub"></p>
+        </div>
+        <div class="slider-wrapper">
+            <button class="slider-btn slider-btn-left" onclick="scrollSlider('promoGrid', -1)">&#10094;</button>
+            <div id="promoGrid" class="slider-container"></div>
+            <button class="slider-btn slider-btn-right" onclick="scrollSlider('promoGrid', 1)">&#10095;</button>
+        </div>
+    </section>
+
+    <!-- VIDEO FEED -->
+    <section class="section-wrap">
+        <div class="section-head">
+            <h2 id="secVideoTitle"></h2>
+            <p id="secVideoSub"></p>
+        </div>
+        <div class="slider-wrapper">
+            <button class="slider-btn slider-btn-left" onclick="scrollSlider('videoGrid', -1)">&#10094;</button>
+            <div id="videoGrid" class="slider-container"></div>
+            <button class="slider-btn slider-btn-right" onclick="scrollSlider('videoGrid', 1)">&#10095;</button>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <a href="index.html" class="footer-brand-col">
+                <img src="images/logo-icon.jpg" alt="OH SNAP! Logo" onerror="this.style.display='none'">
+                <span class="footer-logo-text">OH SNAP<span>!</span></span>
+            </a>
+            <div class="footer-left">
+                <h3 id="fBrand">OH SNAP! Photobox Group</h3>
+                <address class="footer-info-row">
+                    <svg class="footer-item-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+                    <div><strong data-en="Center:" data-id="Pusat:">Pusat:</strong> <span id="fBranches">Kediri Mall Lt.5, Plaza Cilacap Lt.3, Laksana Baru Lt.3, Plaza Pekalongan Lt.2, Yogya Pemalang Lt.3</span></div>
+                </address>
+                <p class="footer-info-row">
+                    <svg class="footer-item-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6zm9.65 1.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+                    <a id="fIg" href="https://www.instagram.com/ohsnap_photobox" target="_blank" rel="noopener noreferrer">@ohsnap_photobox</a>
+                </p>
+                <p class="footer-info-row">
+                    <svg class="footer-item-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                    <a id="fTt" href="https://www.tiktok.com/@ohsnap_photobox" target="_blank" rel="noopener noreferrer">@ohsnap_photobox</a>
+                </p>
+                <div class="footer-helpdesk">
+                    <h4 data-en="Helpdesk" data-id="Bantuan">Bantuan</h4>
+                    <ul>
+                        <li><a href="resend.html" data-en="Resend Softcopy" data-id="Kirim Ulang Softcopy">Kirim Ulang Softcopy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-map-col">
+                <h4 id="fCardTitle" class="footer-map-heading" data-en="Find nearby OH SNAP! Studio:" data-id="Temukan Studio OH SNAP! Terdekat:">Temukan Studio OH SNAP! Terdekat:</h4>
+                <p id="fCardDesc" style="display:none;"></p>
+                <div class="footer-map-box" onclick="openNearestOhSnapGps(event)" role="button" tabindex="0" aria-label="Buka Google Maps Cabang OH SNAP! Terdekat via GPS">
+                    <div class="footer-map-overlay-card">
+                        <div class="map-card-title" id="footerNearestTitle">OH SNAP! Photobox</div>
+                        <div class="map-card-sub" id="footerNearestSub" data-en="Click to route to nearest branch via GPS" data-id="Klik untuk rute cabang terdekat via GPS">Klik untuk rute cabang terdekat via GPS</div>
+                        <div class="map-card-rating"><span>4.9</span> <span class="stars">★★★★★</span> <span>(OH SNAP! Studio)</span></div>
+                        <div class="map-card-actions">
+                            <span class="btn-open-maps">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                                <span data-en="Open in Maps" data-id="Buka di Maps">Buka di Maps</span>
+                            </span>
+                            <span class="btn-dir-icon" title="Rute GPS">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M21.71 11.29l-9-9a.996.996 0 0 0-1.41 0l-9 9a.996.996 0 0 0 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9a.996.996 0 0 0 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="footer-map-click-layer"></div>
+                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="eager" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="fCopy">&copy; 2026 OH SNAP! Photobox. All rights reserved.</p>
+            <div class="footer-bottom-socials">
+                <a id="fIgBottom" href="https://www.instagram.com/ohsnap_photobox" target="_blank" rel="noopener noreferrer" class="footer-social-circle" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6zm9.65 1.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+                </a>
+                <a id="fTtBottom" href="https://www.tiktok.com/@ohsnap_photobox" target="_blank" rel="noopener noreferrer" class="footer-social-circle" aria-label="TikTok">
+                    <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="cms-cloud.js"></script>
+    <script>
+        let currentLang = 'id';
+        try { currentLang = localStorage.getItem('siteLang') || 'id'; } catch (e) {}
+
+        function escHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function getMediaFromIDB(key) {
+            return new Promise((resolve) => {
+                try {
+                if (typeof indexedDB === 'undefined') return resolve(null);
+                const req = indexedDB.open('ohsnap_media_db', 2);
+                req.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('media')) {
+                        db.createObjectStore('media');
+                    }
+                };
+                req.onsuccess = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('media')) return resolve(null);
+                    const tx = db.transaction('media', 'readonly');
+                    const getReq = tx.objectStore('media').get(key);
+                    getReq.onsuccess = () => resolve(getReq.result || null);
+                    getReq.onerror = () => resolve(null);
+                };
+                req.onerror = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+        }
+        
+        const defaultCMS = {
+            colors: { primary: '#ff1493', secondary: '#2b4c7e', bg: '#fff0f5', footer: '#18171d' },
+            banners: {
+                home: { titleId: 'LANGSUNG CETAK BAWA PULANG', titleEn: 'INSTANT PRINT & TAKE IT HOME', subId: 'Photobox & Self-Photo Studio kekinian.', subEn: 'Trendy Photobox Studio.', imgUrl: '' },
+                about: { 
+                    titleId: 'About Our <span>Story</span>', titleEn: 'About Our <span>Story</span>', 
+                    subId: 'OH SNAP! Photobox hadir dari semangat untuk mengabadikan setiap momen hangat, spontan, dan tak terlupakan bersama orang-orang tersayang. Berawal dari konsep photobox tematik yang unik dan kreatif, kini kami hadir di berbagai pusat perbelanjaan (Mall).',
+                    subEn: 'OH SNAP! Photobox was born from the spirit of capturing warm, spontaneous, and unforgettable moments with your favorite people...',
+                    btnId: 'Read more →', btnEn: 'Read more →',
+                    imgUrl: '' 
+                }
+            },
+            titles: { 
+                titlePromoId: 'Promo <span>Spesial</span> Bulan Ini',
+                titlePromoEn: 'This Month\'s <span>Special</span> Promo',
+                subPromoId: 'Jangan lewatkan penawaran menarik di berbagai cabang OH SNAP! Photobox',
+                subPromoEn: 'Don\'t miss exciting offers at various OH SNAP! Photobox branches',
+                titleStudioId: 'Suasana <span>Studio & Booth</span>',
+                titleStudioEn: '<span>Studio & Booth</span> Vibes',
+                subStudioId: 'Intip keseruan dan estetika bilik tematik kami di berbagai kota',
+                subStudioEn: 'Take a peek at the fun and aesthetics of our thematic booths across cities',
+                titleVideoId: 'Keseruan Sobat <span>OH SNAP!</span>',
+                titleVideoEn: 'Fun Moments with <span>OH SNAP!</span>',
+                subVideoId: 'Video feed momen seru pelanggan kami di bilik photobox',
+                subVideoEn: 'Video feed of our customers\' fun moments in the photobox booth'
+            },
+            studios: [
+                { title: 'Booth Train Thematic', desc: 'Desain kabin kereta estetik', img: '' },
+                { title: 'Booth Hotel & Elevator', desc: 'Nuansa lobi hotel & lift', img: '' },
+                { title: 'Booth Claw & Pastel', desc: 'Warna cerah penuh keceriaan', img: '' },
+                { title: 'Booth Portable Series', desc: 'Gaya minimalis modern', img: '' }
+            ],
+            videos: [
+                { title: 'Video 1', url: '' },
+                { title: 'Video 2', url: '' },
+                { title: 'Video 3', url: '' },
+                { title: 'Video 4', url: '' },
+                { title: 'Video 5', url: '' }
+            ],
+            promos: [
+                { title: 'Promo Pelajar & Mahasiswa', badge: 'HOT PROMO', desc: 'Diskon spesial KTM aktif!', img: '' },
+                { title: 'Paket Bundling Extra Print', badge: 'BEST DEAL', desc: 'Cetak lebih banyak untuk geng.', img: '' },
+                { title: 'Weekend Flash Sale', badge: 'LIMITED', desc: 'Potongan harga khusus.', img: '' }
+            ],
+            footer: { 
+                brand: 'OH SNAP! Photobox Group', 
+                branches: 'Kediri Mall Lt.5, Plaza Cilacap Lt.3', 
+                igName: '@ohsnap_photobox', 
+                igUrl: '#', 
+                ttName: '@ohsnap_photobox', 
+                ttUrl: '#', 
+                cardTitleId: 'Find nearby OH SNAP! Studio',
+                cardTitleEn: 'Find nearby OH SNAP! Studio',
+                cardDescId: 'Temukan booth dan studio terdekat di kotamu untuk abadikan momen serumu hari ini!',
+                cardDescEn: 'Find the nearest booth and studio in your city to capture your special moments today!',
+                copyright: '© 2026 OH SNAP! Photobox. All rights reserved.' 
+            }
+        };
+
+        let cms = defaultCMS;
+        let hasInitialLocal = false;
+        try {
+            const parsed = JSON.parse(localStorage.getItem('ohsnap_cms_data'));
+            if (parsed && typeof parsed === 'object') {
+                cms = parsed;
+                hasInitialLocal = true;
+            }
+        } catch (e) {}
+
+        let lastRenderedSignature = '';
+        let lastStudioSig = '';
+        let lastPromoSig = '';
+        let lastVideoSig = '';
+
+        (function() {
+            const btn = document.getElementById('menuToggle');
+            const nav = document.getElementById('navContainer');
+            if (!btn || !nav) return;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                nav.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if (nav.classList.contains('active') && !nav.contains(e.target) && !btn.contains(e.target)) {
+                    nav.classList.remove('active');
+                }
+            });
+        })();
+
+        function scrollSlider(elementId, direction) {
+            const container = document.getElementById(elementId);
+            const scrollAmount = 260 * direction;
+            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+
+        function attachAutoPauseListeners() {
+            const allVideos = document.querySelectorAll('.auto-pause-video');
+            allVideos.forEach(vid => {
+                const wrap = vid.closest('.video-card-wrap');
+                vid.onplay = () => {
+                    if (wrap) wrap.classList.add('is-playing');
+                    allVideos.forEach(otherVid => {
+                        if (otherVid !== vid) otherVid.pause();
+                    });
+                };
+                vid.onpause = () => {
+                    if (wrap) wrap.classList.remove('is-playing');
+                };
+                vid.onended = () => {
+                    if (wrap) wrap.classList.remove('is-playing');
+                };
+            });
+        }
+
+
+        // Helper Peta Footer & Rute Cabang OH SNAP! Terdekat via GPS (Instant & Native App Link)
+        const GMAPS_ROOT = 'https://www.google' + '.com/maps';
+        const GMAPS_EMBED_ROOT = 'https://maps.google' + '.com/maps';
+
+        const OHSNAP_BRANCH_COORDS = [
+            {
+                match: 'kediri',
+                name: 'Oh Snap Photobox Kediri (Kediri Mall Lt.5)',
+                lat: -7.8166,
+                lng: 112.0163,
+                placeId: 'ChIJJTp8gHxXeC4R0eMGkmnssvQ',
+                destQuery: 'Oh Snap Photobox Kediri, Kediri Mall Lt.5, Jl. Hayam Wuruk No.46, Kota Kediri'
+            },
+            {
+                match: 'cilacap',
+                name: 'Oh Snap Photobox (Plaza Cilacap Lt.3)',
+                lat: -7.7279,
+                lng: 109.0076,
+                placeId: 'ChIJ71iRM3wTZS4Rrr7EqRI3A84',
+                destQuery: 'Oh Snap Photobox, Plaza Cilacap Lt.3, Jl. RE. Martadinata No.42, Cilacap'
+            },
+            {
+                match: 'laksana',
+                name: 'Oh Snap Photobox Majenang (Laksana Baru Lt.3)',
+                lat: -7.2975,
+                lng: 108.7614,
+                placeId: 'ChIJ_3pPM_1_by4RT_FVbDVw8p4',
+                destQuery: 'Oh Snap Photobox Majenang, Laksana Baru Majenang Lt.3, Jl. Diponegoro No.312, Majenang'
+            },
+            {
+                match: 'pekalongan',
+                name: 'Oh Snap Photobox Pekalongan (Plaza Pekalongan Lt.2)',
+                lat: -6.8898,
+                lng: 109.6746,
+                placeId: 'ChIJ46o-mGMlcC4REovLqtjx-_4',
+                destQuery: 'Oh Snap Photobox Pekalongan, Plaza Pekalongan Lt.2, Jl. Nusantara No.5, Kota Pekalongan'
+            },
+            {
+                match: 'pemalang',
+                name: 'Oh Snap Photobox Pemalang (Yogya Pemalang Lt.3)',
+                lat: -6.8903,
+                lng: 109.3808,
+                placeId: 'ChIJkY0Gm7nbby4RmIpX5D5mdhw',
+                destQuery: 'Oh Snap Photobox Pemalang, Toserba YOGYA Pemalang Lt.3, Jl. Jend. Sudirman No.94, Pemalang'
+            }
+        ];
+
+        function getOhSnapBranchesWithCoords() {
+            const rawList = (cms && Array.isArray(cms.locations) && cms.locations.length > 0) ? cms.locations : [
+                { name: 'Kediri Mall', floor: 'Lantai 5' },
+                { name: 'Plaza Cilacap', floor: 'Lantai 3' },
+                { name: 'Laksana Baru', floor: 'Lantai 3' },
+                { name: 'Plaza Pekalongan', floor: 'Lantai 2' },
+                { name: 'Yogya Pemalang', floor: 'Lantai 3' }
+            ];
+            return rawList.map(b => {
+                const nm = String(b.name || 'Cabang').trim();
+                const fl = b.floor ? ' ' + String(b.floor).replace(/^Lantai\s+/i, 'Lt.') : '';
+                const lower = nm.toLowerCase();
+                const known = OHSNAP_BRANCH_COORDS.find(k => lower.includes(k.match));
+                let lat = known ? known.lat : null;
+                let lng = known ? known.lng : null;
+                let placeId = known ? known.placeId : '';
+                let destQuery = known ? known.destQuery : ('Oh Snap Photobox ' + nm);
+
+                const mUrl = String(b.mapUrl || '').trim();
+                const coordMatch = mUrl.match(/(?:@|q=)(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                if (coordMatch) {
+                    lat = parseFloat(coordMatch[1]);
+                    lng = parseFloat(coordMatch[2]);
+                }
+                const pidMatch = mUrl.match(/query_place_id=([A-Za-z0-9_-]+)/);
+                if (pidMatch) placeId = pidMatch[1];
+
+                const cleanMapUrl = known
+                    ? (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(known.destQuery) + (known.placeId ? '&query_place_id=' + encodeURIComponent(known.placeId) : ''))
+                    : OhSnapCloud.safeUrl(mUrl, GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery));
+
+                return {
+                    title: known ? known.name : ('OH SNAP! ' + nm + fl),
+                    destQuery: destQuery,
+                    placeId: placeId,
+                    mapUrl: cleanMapUrl,
+                    lat: lat,
+                    lng: lng
+                };
+            });
+        }
+
+        function calcHaversineKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function findNearestBranchFromCoords(uLat, uLng) {
+            const branches = getOhSnapBranchesWithCoords();
+            let best = branches[0];
+            let bestDist = Infinity;
+            branches.forEach(b => {
+                if (typeof b.lat === 'number' && typeof b.lng === 'number') {
+                    const d = calcHaversineKm(uLat, uLng, b.lat, b.lng);
+                    if (d < bestDist) {
+                        bestDist = d;
+                        best = b;
+                    }
+                }
+            });
+            return { branch: best, distanceKm: bestDist };
+        }
+
+        function updateFooterMapPreview(nearest, distanceKm) {
+            if (!nearest) return;
+            const isEn = currentLang === 'en';
+            const distStr = isFinite(distanceKm) ? (' • ' + distanceKm.toFixed(1) + ' km') : '';
+            const titleEl = document.getElementById('footerNearestTitle');
+            const subEl = document.getElementById('footerNearestSub');
+            const iframeEl = document.getElementById('footerMapIframe');
+            if (titleEl) titleEl.textContent = nearest.title;
+            if (subEl && isFinite(distanceKm)) {
+                subEl.textContent = (isEn ? 'Nearest branch' : 'Cabang terdekat') + distStr;
+            }
+            if (iframeEl) {
+                const embedUrl = GMAPS_EMBED_ROOT + '?q=' + encodeURIComponent(nearest.destQuery) + '&t=&z=16&ie=UTF8&iwloc=&output=embed';
+                if (iframeEl.getAttribute('src') !== embedUrl) iframeEl.src = embedUrl;
+            }
+        }
+
+        // Cache koordinat GPS agar perpindahan halaman & klik di Desktop 0ms (instan tanpa jeda)
+        let cachedUserCoords = null;
+        try {
+            const savedCoords = sessionStorage.getItem('ohsnap_gps_coords');
+            if (savedCoords) cachedUserCoords = JSON.parse(savedCoords);
+        } catch (e) {}
+
+        function saveUserCoordsCache(lat, lng) {
+            if (typeof lat === 'number' && typeof lng === 'number') {
+                cachedUserCoords = { lat: lat, lng: lng };
+                try { sessionStorage.setItem('ohsnap_gps_coords', JSON.stringify(cachedUserCoords)); } catch (e) {}
+            }
+        }
+
+        function openNearestOhSnapGps(event) {
+            if (event) event.preventDefault();
+            const branches = getOhSnapBranchesWithCoords();
+            const defaultBranch = branches[0] || OHSNAP_BRANCH_COORDS[0];
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            // DESKTOP: Buka Google Maps Rute secara INSTAN (0ms) tanpa menunggu loading GPS browser
+            if (!isMobile) {
+                const res = cachedUserCoords
+                    ? findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng)
+                    : { branch: defaultBranch, distanceKm: Infinity };
+                const nearest = res.branch || defaultBranch;
+                const desktopDirUrl = GMAPS_ROOT + '/dir/?api=1&destination=' + encodeURIComponent(nearest.destQuery) + (nearest.placeId ? '&destination_place_id=' + encodeURIComponent(nearest.placeId) : '') + '&travelmode=driving';
+                window.open(desktopDirUrl, '_blank', 'noopener,noreferrer');
+                return;
+            }
+
+            // MOBILE (HP): Langsung buka aplikasi native Google Maps / Apple Maps
+            const isEn = currentLang === 'en';
+            const subEl = document.getElementById('footerNearestSub');
+            if (subEl) subEl.textContent = isEn ? '⏳ Opening Maps app...' : '⏳ Membuka aplikasi Maps...';
+
+            function navigateMobile(uLat, uLng) {
+                if (typeof uLat === 'number' && typeof uLng === 'number') saveUserCoordsCache(uLat, uLng);
+                const res = (typeof uLat === 'number' && typeof uLng === 'number')
+                    ? findNearestBranchFromCoords(uLat, uLng)
+                    : (cachedUserCoords ? findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng) : { branch: defaultBranch, distanceKm: Infinity });
+                const nearest = res.branch || defaultBranch;
+                updateFooterMapPreview(nearest, res.distanceKm);
+
+                let mapTargetUrl = '';
+                if (/Android/i.test(navigator.userAgent)) {
+                    mapTargetUrl = 'geo:' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163) + '?q=' + encodeURIComponent(nearest.destQuery);
+                } else {
+                    mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery);
+                }
+                window.location.href = mapTargetUrl;
+            }
+
+            if (cachedUserCoords) {
+                navigateMobile(cachedUserCoords.lat, cachedUserCoords.lng);
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                navigateMobile(null, null);
+                return;
+            }
+
+            let responded = false;
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    if (responded) return;
+                    responded = true;
+                    navigateMobile(pos.coords.latitude, pos.coords.longitude);
+                },
+                function() {
+                    if (responded) return;
+                    responded = true;
+                    navigateMobile(null, null);
+                },
+                { enableHighAccuracy: false, timeout: 1800, maximumAge: 300000 }
+            );
+
+            setTimeout(function() {
+                if (!responded) {
+                    responded = true;
+                    navigateMobile(null, null);
+                }
+            }, 2000);
+        }
+
+        (function autoDetectNearestOnLoad() {
+            try {
+                if (cachedUserCoords) {
+                    const cachedRes = findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng);
+                    if (cachedRes && cachedRes.branch) updateFooterMapPreview(cachedRes.branch, cachedRes.distanceKm);
+                }
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
+                        const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
+                        if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
+                    }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                }
+            } catch (e) {}
+        })();
+
+        function applyCMS() {
+            if (!cms) return;
+            if (cms.colors) {
+                document.documentElement.style.setProperty('--primary', cms.colors.primary || '#ff1493');
+                document.documentElement.style.setProperty('--secondary', cms.colors.secondary || '#2b4c7e');
+                document.documentElement.style.setProperty('--bg-main', cms.colors.bg || '#fff0f5');
+                document.documentElement.style.setProperty('--footer-bg', cms.colors.footer || '#18171d');
+            }
+            if (cms.banners) {
+                if (cms.banners.home) {
+                    const b = cms.banners.home;
+                    document.getElementById('heroTitle').innerHTML = OhSnapCloud.safeTitleHtml(currentLang === 'en' ? (b.titleEn || b.titleId || '') : (b.titleId || ''));
+                    document.getElementById('heroSub').textContent = currentLang === 'en' ? (b.subEn || b.subId || '') : (b.subId || '');
+                    if (b.imgUrl && b.imgUrl.trim() !== '' && b.imgUrl !== 'images/hero-banner.jpg') {
+                        const targetBg = `url("${OhSnapCloud.safeUrl(b.imgUrl, '')}")`;
+                        if (document.getElementById('heroBannerBg').style.backgroundImage !== targetBg) {
+                            document.getElementById('heroBannerBg').style.backgroundImage = targetBg;
+                        }
+                    } else {
+                        document.getElementById('heroBannerBg').style.backgroundImage = 'none';
+                    }
+                }
+                if (cms.banners.about) {
+                    const ab = cms.banners.about;
+                    const aboutTitleEl = document.getElementById('aboutTitle');
+                    const aboutSubEl = document.getElementById('aboutSub');
+                    const aboutBtnEl = document.getElementById('aboutBtn');
+                    if (aboutTitleEl && (ab.titleId || ab.titleEn)) {
+                        aboutTitleEl.innerHTML = OhSnapCloud.safeTitleHtml(currentLang === 'en' ? (ab.titleEn || ab.titleId) : ab.titleId);
+                    }
+                    if (aboutSubEl && (ab.subId || ab.subEn)) {
+                        aboutSubEl.textContent = currentLang === 'en' ? (ab.subEn || ab.subId) : ab.subId;
+                    }
+                    if (aboutBtnEl && (ab.btnId || ab.btnEn)) {
+                        aboutBtnEl.textContent = currentLang === 'en' ? (ab.btnEn || ab.btnId) : ab.btnId;
+                    }
+                }
+                const aboutImgEl = document.getElementById('aboutImg');
+                if (aboutImgEl) {
+                    let aboutSrc = '';
+                    if (cms.banners.about && cms.banners.about.imgUrl && cms.banners.about.imgUrl.trim() !== '' && cms.banners.about.imgUrl !== 'images/about-img.jpg') {
+                        aboutSrc = cms.banners.about.imgUrl;
+                    } else if (cms.banners.home && cms.banners.home.aboutImgUrl && cms.banners.home.aboutImgUrl.trim() !== '' && cms.banners.home.aboutImgUrl !== 'images/about-img.jpg') {
+                        aboutSrc = cms.banners.home.aboutImgUrl;
+                    }
+                    if (aboutSrc) {
+                        if (aboutImgEl.getAttribute('src') !== aboutSrc) {
+                            aboutImgEl.src = OhSnapCloud.safeUrl(aboutSrc, '');
+                        }
+                        aboutImgEl.style.display = 'block';
+                        aboutImgEl.style.opacity = '1';
+                    } else {
+                        aboutImgEl.style.opacity = '0';
+                    }
+                }
+            }
+
+            const t = Object.assign({}, defaultCMS.titles, (cms && cms.titles) ? cms.titles : {});
+            const isEn = currentLang === 'en';
+            document.getElementById('secPromoTitle').innerHTML = OhSnapCloud.safeTitleHtml(isEn ? (t.titlePromoEn || t.titlePromoId || defaultCMS.titles.titlePromoEn) : (t.titlePromoId || defaultCMS.titles.titlePromoId));
+            document.getElementById('secPromoSub').textContent = isEn ? (t.subPromoEn || t.subPromoId || defaultCMS.titles.subPromoEn) : (t.subPromoId || defaultCMS.titles.subPromoId);
+            document.getElementById('secStudioTitle').innerHTML = OhSnapCloud.safeTitleHtml(isEn ? (t.titleStudioEn || t.titleStudioId || defaultCMS.titles.titleStudioEn) : (t.titleStudioId || defaultCMS.titles.titleStudioId));
+            document.getElementById('secStudioSub').textContent = isEn ? (t.subStudioEn || t.subStudioId || defaultCMS.titles.subStudioEn) : (t.subStudioId || defaultCMS.titles.subStudioId);
+            document.getElementById('secVideoTitle').innerHTML = OhSnapCloud.safeTitleHtml(isEn ? (t.titleVideoEn || t.titleVideoId || defaultCMS.titles.titleVideoEn) : (t.titleVideoId || defaultCMS.titles.titleVideoId));
+            document.getElementById('secVideoSub').textContent = isEn ? (t.subVideoEn || t.subVideoId || defaultCMS.titles.subVideoEn) : (t.subVideoId || defaultCMS.titles.subVideoId);
+
+            // Render Studios (hanya jika data studio berubah agar gambar tidak berkedip)
+            const studiosList = (cms.studios && cms.studios.length > 0) ? cms.studios : defaultCMS.studios;
+            const currentStudioSig = JSON.stringify(studiosList);
+            if (currentStudioSig !== lastStudioSig) {
+                lastStudioSig = currentStudioSig;
+                document.getElementById('studioGrid').innerHTML = studiosList.map(s => `
+                    <div class="slide-item-studio">
+                        <div class="card-item">
+                            ${OhSnapCloud.safeUrl(s.img, '') ? `<div style="width:100%; height:460px; overflow:hidden; background:#fff;"><img src="${escHtml(OhSnapCloud.safeUrl(s.img, ''))}" alt="${escHtml(s.title)}" style="width: 100%; height: 460px; object-fit: cover; display:block;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-box\\'></div>'"></div>` : `<div class="empty-portrait-box"></div>`}
+                            <div class="card-body">
+                                <div>
+                                    <h3>${escHtml(s.title || 'Nama Studio')}</h3>
+                                    <p>${escHtml(s.desc || 'Deskripsi studio')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render Promos (hanya jika data promo berubah)
+            const promosList = (cms.promos && cms.promos.length > 0) ? cms.promos : defaultCMS.promos;
+            const currentPromoSig = JSON.stringify(promosList);
+            if (currentPromoSig !== lastPromoSig) {
+                lastPromoSig = currentPromoSig;
+                document.getElementById('promoGrid').innerHTML = promosList.map(p => `
+                    <div class="slide-item-promo">
+                        <div class="card-item">
+                            ${OhSnapCloud.safeUrl(p.img, '') ? `<div style="width:100%; height:460px; overflow:hidden; background:#fff;"><img src="${escHtml(OhSnapCloud.safeUrl(p.img, ''))}" alt="${escHtml(p.title)}" style="width: 100%; height: 460px; object-fit: cover; display:block;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-box\\'></div>'"></div>` : `<div class="empty-portrait-box"></div>`}
+                            <div class="card-body">
+                                <div>
+                                    <span class="badge-tag">${escHtml(p.badge || 'PROMO')}</span>
+                                    <h3>${escHtml(p.title || 'Judul Promo')}</h3>
+                                    <p>${escHtml(p.desc || 'Keterangan promo')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render Videos (hanya jika data video berubah agar video tidak reload saat ganti bahasa)
+            const videosList = (cms.videos && cms.videos.length > 0) ? cms.videos : defaultCMS.videos;
+            const currentVideoSig = JSON.stringify(videosList) + '_' + currentLang;
+            if (currentVideoSig !== lastVideoSig) {
+                lastVideoSig = currentVideoSig;
+                document.getElementById('videoGrid').innerHTML = videosList.map(v => {
+                    let mediaContent = `<div class="empty-portrait-video"></div>`;
+                    let rawUrl = (v && v.url) ? String(v.url).trim() : '';
+                    let rawTargetLink = (v && v.linkUrl) ? String(v.linkUrl).trim() : '';
+                    const safeTargetLink = OhSnapCloud.safeUrl(rawTargetLink, '');
+                    const linkBtnText = currentLang === 'en' ? '🔗 Visit Video Link →' : '🔗 Buka Link Video →';
+                    const pauseOverlayHtml = safeTargetLink
+                        ? `<a href="${escHtml(safeTargetLink)}" target="_blank" rel="noopener noreferrer" class="video-pause-link-btn">${linkBtnText}</a>`
+                        : '';
+
+                    if (rawUrl !== '' && rawUrl !== '#' && rawUrl !== 'images/video-1.mp4' && !rawUrl.startsWith('[')) {
+                        let cleanUrl = rawUrl.replace(/^#/, '').trim();
+                        const safeVidUrl = OhSnapCloud.safeUrl(cleanUrl, '');
+                        let parsedHost = '';
+                        if (safeVidUrl && /^https?:\/\//i.test(safeVidUrl)) {
+                            try { parsedHost = new URL(safeVidUrl).hostname.toLowerCase(); } catch (e) {}
+                        }
+                        const isTikTok = parsedHost === 'tiktok.com' || parsedHost.endsWith('.tiktok.com');
+                        const isIg = parsedHost === 'instagram.com' || parsedHost.endsWith('.instagram.com');
+
+                        if (safeVidUrl && (isTikTok || isIg)) {
+                            let platformName = isTikTok ? 'TikTok' : 'Instagram';
+                            const finalSocialUrl = safeTargetLink || safeVidUrl;
+                            mediaContent = `<div style="position:relative; width:100%; height:480px; border-radius:24px; border:2px solid #fbcfe8; overflow:hidden; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+                                <div style="position:absolute; inset:0; background:linear-gradient(135deg, #2b4c7e 0%, #ff1493 100%); opacity:0.85;"></div>
+                                <div style="position:relative; z-index:2; padding:20px; display:flex; flex-direction:column; align-items:center; gap:14px;">
+                                    <div style="width:60px; height:60px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.5rem; box-shadow:0 6px 20px rgba(0,0,0,0.4);">▶</div>
+                                    <span style="color:#fff; font-weight:700; font-size:1.05rem; text-shadow:0 2px 8px rgba(0,0,0,0.8);">Tonton di ${platformName}</span>
+                                    <a href="${escHtml(finalSocialUrl)}" target="_blank" rel="noopener noreferrer" style="background:#fff; color:var(--secondary); padding:10px 24px; border-radius:50px; font-weight:800; font-size:0.9rem; text-decoration:none; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:0.2s;">Buka Tautan →</a>
+                                </div>
+                            </div>`;
+                        } else if (safeVidUrl && (safeVidUrl.endsWith('.mp4') || safeVidUrl.startsWith('blob:') || safeVidUrl.startsWith('data:video') || /^https?:\/\//i.test(safeVidUrl))) {
+                            mediaContent = `<div class="video-card-wrap"><video class="auto-pause-video" src="${escHtml(safeVidUrl)}" preload="metadata" controls controlsList="nodownload" oncontextmenu="return false;" playsinline loop style="width: 100%; height: 480px; object-fit: cover; border-radius: 24px; border: 2px solid #fbcfe8; background:#000;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-video\\'></div>'"></video>${pauseOverlayHtml}</div>`;
+                        }
+                    }
+                    return `<div class="slide-item-video">${mediaContent}</div>`;
+                }).join('');
+
+                attachAutoPauseListeners();
+
+                setTimeout(async () => {
+                    const idbSlots = document.querySelectorAll('[data-idb-slot]');
+                    for (const slotEl of idbSlots) {
+                        const key = slotEl.getAttribute('data-idb-slot');
+                        const record = await getMediaFromIDB(key);
+                        if (record && (record instanceof Blob || record.buffer)) {
+                            const blob = (record instanceof Blob) ? record : new Blob([record.buffer], { type: record.type || 'video/mp4' });
+                            const blobUrl = URL.createObjectURL(blob);
+                            slotEl.outerHTML = `<video class="auto-pause-video" src="${blobUrl}" preload="metadata" controls controlsList="nodownload" oncontextmenu="return false;" playsinline loop style="width: 100%; height: 480px; object-fit: cover; border-radius: 24px; border: 2px solid #fbcfe8; background:#000;"></video>`;
+                        }
+                    }
+                    attachAutoPauseListeners();
+                }, 50);
+            }
+
+            if (cms && cms.footer) {
+                document.getElementById('fBrand').textContent = cms.footer.brand;
+                document.getElementById('fBranches').textContent = cms.footer.branches;
+                const safeIgUrl = OhSnapCloud.safeUrl(cms.footer.igUrl, 'https://www.instagram.com/ohsnap_photobox');
+                const safeTtUrl = OhSnapCloud.safeUrl(cms.footer.ttUrl, 'https://www.tiktok.com/@ohsnap_photobox');
+                const ig = document.getElementById('fIg'); if(ig) { ig.textContent = cms.footer.igName; ig.href = safeIgUrl; }
+                const tt = document.getElementById('fTt'); if(tt) { tt.textContent = cms.footer.ttName; tt.href = safeTtUrl; }
+                const igBot = document.getElementById('fIgBottom'); if(igBot) { igBot.href = safeIgUrl; }
+                const ttBot = document.getElementById('fTtBottom'); if(ttBot) { ttBot.href = safeTtUrl; }
+
+                const rawTitleId = (cms.footer.cardTitleId || '').trim();
+                const rawTitleEn = (cms.footer.cardTitleEn || '').trim();
+                const isDefaultEngTitle = !rawTitleId || rawTitleId.toLowerCase() === 'find nearby oh snap! studio';
+                const finalCardTitle = currentLang === 'en'
+                    ? (rawTitleEn || 'Find nearby OH SNAP! Studio:')
+                    : (isDefaultEngTitle ? 'Temukan Studio OH SNAP! Terdekat:' : rawTitleId);
+                const cardTitleEl = document.getElementById('fCardTitle');
+                if (cardTitleEl) cardTitleEl.textContent = finalCardTitle;
+
+                const cardDescEl = document.getElementById('fCardDesc');
+                if (cardDescEl) {
+                    cardDescEl.textContent = currentLang === 'en' ? (cms.footer.cardDescEn || 'Find the nearest booth and studio in your city to capture your special moments today!') : (cms.footer.cardDescId || 'Temukan booth dan studio terdekat di kotamu untuk abadikan momen serumu hari ini!');
+                }
+                document.getElementById('fCopy').textContent = cms.footer.copyright;
+            } else {
+                const cardTitleEl = document.getElementById('fCardTitle');
+                if (cardTitleEl) {
+                    cardTitleEl.textContent = currentLang === 'en' ? 'Find nearby OH SNAP! Studio:' : 'Temukan Studio OH SNAP! Terdekat:';
+                }
+            }
+            const firstBranches = getOhSnapBranchesWithCoords();
+            if (firstBranches && firstBranches[0]) {
+                const nTitle = document.getElementById('footerNearestTitle');
+                if (nTitle && nTitle.textContent === 'OH SNAP! Photobox') {
+                    nTitle.textContent = firstBranches[0].title;
+                }
+            }
+            try { lastRenderedSignature = JSON.stringify(cms) + '_' + currentLang; } catch (e) {}
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            try { localStorage.setItem('siteLang', lang); } catch (e) {}
+            document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+            document.getElementById('btnID').classList.toggle('active', lang === 'id');
+            document.querySelectorAll('[data-en]').forEach(el => {
+                el.innerHTML = el.getAttribute('data-' + lang);
+            });
+            applyCMS();
+        }
+
+        if (hasInitialLocal) {
+            setLanguage(currentLang);
+        }
+
+        async function syncLatestCMS() {
+            try {
+                const localSaved = localStorage.getItem('ohsnap_cms_data');
+                if (localSaved) {
+                    const parsed = JSON.parse(localSaved);
+                    if (parsed && JSON.stringify(parsed) + '_' + currentLang !== lastRenderedSignature) {
+                        cms = parsed;
+                        setLanguage(currentLang);
+                    }
+                }
+            } catch (e) {}
+            try {
+                const cloudCms = await OhSnapCloud.pullIfNewer();
+                if (cloudCms && JSON.stringify(cloudCms) + '_' + currentLang !== lastRenderedSignature) {
+                    cms = cloudCms;
+                    setLanguage(currentLang);
+                } else if (!lastRenderedSignature) {
+                    setLanguage(currentLang);
+                }
+            } catch (e) {
+                if (!lastRenderedSignature) setLanguage(currentLang);
+            }
+            document.documentElement.classList.remove('awaiting-first-cloud');
+        }
+
+        window.addEventListener('storage', () => { syncLatestCMS(); });
+        window.addEventListener('focus', () => { syncLatestCMS(); });
+        syncLatestCMS();
+    </script>
+</body>
+</html>
