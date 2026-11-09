@@ -56,7 +56,7 @@
         .hero-banner-content h1 span { color: #ff69b4; }
         .hero-banner-content p { font-size: 1rem; opacity: 0.95; line-height: 1.5; max-width: 650px; margin: 0 auto; }
 
-        .frames-section { max-width: 1200px; margin: 40px auto 70px; padding: 0 5%; }
+        .frames-section { max-width: 1320px; margin: 40px auto 70px; padding: 0 4%; }
         
         .slider-wrapper {
             position: relative;
@@ -65,7 +65,7 @@
         }
         .slider-container {
             display: flex;
-            gap: 25px;
+            gap: 20px;
             overflow-x: auto;
             scroll-behavior: smooth;
             width: 100%;
@@ -76,8 +76,8 @@
         .slider-container::-webkit-scrollbar { display: none; }
 
         .slide-item-frame {
-            flex: 0 0 calc(20% - 20px);
-            min-width: 250px;
+            flex: 0 0 calc((100% - 80px) / 5);
+            min-width: 180px;
         }
 
         .slider-btn {
@@ -319,8 +319,26 @@
 
         function scrollFrameSlider(direction) {
             const container = document.getElementById('framesGrid');
-            const scrollAmount = 300 * direction;
-            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            if (!container) return;
+            const firstCard = container.querySelector('.slide-item-frame');
+            const step = firstCard ? (firstCard.offsetWidth + 20) : 260;
+            container.scrollBy({ left: step * direction, behavior: 'smooth' });
+        }
+
+        function updateFrameSliderButtons(totalItems) {
+            const grid = document.getElementById('framesGrid');
+            const btnLeft = document.getElementById('btnFrameLeft');
+            const btnRight = document.getElementById('btnFrameRight');
+            if (!btnLeft || !btnRight) return;
+            const count = typeof totalItems === 'number' ? totalItems : (grid ? grid.children.length : 0);
+            const isOverflowing = grid ? (grid.scrollWidth > grid.clientWidth + 4) : false;
+            if (count > 5 || isOverflowing) {
+                btnLeft.style.display = 'flex';
+                btnRight.style.display = 'flex';
+            } else {
+                btnLeft.style.display = 'none';
+                btnRight.style.display = 'none';
+            }
         }
 
 
@@ -456,7 +474,7 @@
             }
         }
 
-        // Cache koordinat GPS agar perpindahan halaman & klik di Desktop 0ms (instan tanpa jeda)
+        // Cache koordinat GPS agar perpindahan halaman & klik di Desktop/Mobile 0ms (instan tanpa jeda)
         let cachedUserCoords = null;
         try {
             const savedCoords = sessionStorage.getItem('ohsnap_gps_coords');
@@ -464,19 +482,27 @@
         } catch (e) {}
 
         function saveUserCoordsCache(lat, lng) {
-            if (typeof lat === 'number' && typeof lng === 'number') {
+            if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
                 cachedUserCoords = { lat: lat, lng: lng };
                 try { sessionStorage.setItem('ohsnap_gps_coords', JSON.stringify(cachedUserCoords)); } catch (e) {}
             }
+        }
+
+        function isMobileOrTabletDevice() {
+            const ua = navigator.userAgent || '';
+            if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
+            // Deteksi iPadOS 13+ yang menggunakan userAgent Macintosh tetapi memiliki layar sentuh
+            if (/Macintosh/i.test(ua) && navigator.maxTouchPoints && navigator.maxTouchPoints > 1) return true;
+            return false;
         }
 
         function openNearestOhSnapGps(event) {
             if (event) event.preventDefault();
             const branches = getOhSnapBranchesWithCoords();
             const defaultBranch = branches[0] || OHSNAP_BRANCH_COORDS[0];
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isMobile = isMobileOrTabletDevice();
 
-            // DESKTOP: Buka Google Maps Rute secara INSTAN (0ms) tanpa menunggu loading GPS browser
+            // DESKTOP: Buka Google Maps Rute di Tab Baru secara INSTAN (0ms) tanpa menghilangkan tab website
             if (!isMobile) {
                 const res = cachedUserCoords
                     ? findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng)
@@ -487,7 +513,7 @@
                 return;
             }
 
-            // MOBILE (HP): Langsung buka aplikasi native Google Maps / Apple Maps
+            // MOBILE (HP Android & iOS): Langsung buka aplikasi native Maps tanpa konfirmasi web
             const isEn = currentLang === 'en';
             const subEl = document.getElementById('footerNearestSub');
             if (subEl) subEl.textContent = isEn ? '⏳ Opening Maps app...' : '⏳ Membuka aplikasi Maps...';
@@ -504,7 +530,7 @@
                 if (/Android/i.test(navigator.userAgent)) {
                     mapTargetUrl = 'geo:' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163) + '?q=' + encodeURIComponent(nearest.destQuery);
                 } else {
-                    mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery);
+                    mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery) + '&ll=' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163);
                 }
                 window.location.href = mapTargetUrl;
             }
@@ -590,15 +616,8 @@
                 </div>
             `).join('');
 
-            const btnLeft = document.getElementById('btnFrameLeft');
-            const btnRight = document.getElementById('btnFrameRight');
-            if (list.length > 5) {
-                btnLeft.style.display = 'flex';
-                btnRight.style.display = 'flex';
-            } else {
-                btnLeft.style.display = 'none';
-                btnRight.style.display = 'none';
-            }
+            updateFrameSliderButtons(list.length);
+            requestAnimationFrame(() => updateFrameSliderButtons(list.length));
 
             if (cms && cms.footer) {
                 document.getElementById('fBrand').textContent = cms.footer.brand;
@@ -662,8 +681,12 @@
             } catch (e) {}
         }
 
+        window.addEventListener('resize', () => { updateFrameSliderButtons(); });
         window.addEventListener('storage', () => { syncLatestCMS(); });
         window.addEventListener('focus', () => { syncLatestCMS(); });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') syncLatestCMS();
+        });
         syncLatestCMS();
     </script>
 </body>
