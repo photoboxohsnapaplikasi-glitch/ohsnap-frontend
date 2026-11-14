@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <script>/* URL bersih: /layanan.html -> /layanan, /index(.html) -> / */(function(){var p=location.pathname,c=p.replace(/\/index(\.html)?$/,"/").replace(/\.html$/,"");if(c!==p){try{history.replaceState(null,"",c+location.search+location.hash)}catch(e){}}})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resend Softcopy - OH SNAP! Photobox</title>
     <meta name="description" content="Permintaan Resend Softcopy Foto OH SNAP! Photobox.">
@@ -120,19 +121,19 @@
 </head>
 <body>
     <header>
-        <a href="index.html" class="logo-container">
+        <a href="./" class="logo-container">
             <img src="images/logo-icon.jpg" alt="OH SNAP! Logo" class="brand-logo-img" onerror="this.style.display='none'">
             <span class="logo">OH SNAP<span>!</span></span>
         </a>
         <button class="menu-toggle" id="menuToggle" aria-label="Menu Navigasi"><span></span><span></span><span></span></button>
         <div class="nav-container" id="navContainer">
             <nav class="nav-menu">
-                <a href="index.html" data-en="Home" data-id="Halaman">Halaman</a>
-                <a href="layanan.html" data-en="Services" data-id="Layanan">Layanan</a>
-                <a href="frame.html" data-en="Frame" data-id="Frame">Frame</a>
-                <a href="lokasi.html" data-en="Locations" data-id="Lokasi">Lokasi</a>
-                <a href="resend.html" class="active" data-en="Resend Softcopy" data-id="Resend Softcopy">Resend Softcopy</a>
-                <a href="kontak.html" data-en="Contact" data-id="Kontak">Kontak</a>
+                <a href="./" data-en="Home" data-id="Halaman">Halaman</a>
+                <a href="layanan" data-en="Services" data-id="Layanan">Layanan</a>
+                <a href="frame" data-en="Frame" data-id="Frame">Frame</a>
+                <a href="lokasi" data-en="Locations" data-id="Lokasi">Lokasi</a>
+                <a href="resend" class="active" data-en="Resend Softcopy" data-id="Resend Softcopy">Resend Softcopy</a>
+                <a href="kontak" data-en="Contact" data-id="Kontak">Kontak</a>
             </nav>
             <div class="lang-switcher">
                 <button class="lang-btn" id="btnEN" onclick="setLanguage('en')">EN</button>
@@ -196,7 +197,7 @@
 
     <footer>
         <div class="footer-content">
-            <a href="index.html" class="footer-brand-col">
+            <a href="./" class="footer-brand-col">
                 <img src="images/logo-icon.jpg" alt="OH SNAP! Logo" onerror="this.style.display='none'">
                 <span class="footer-logo-text">OH SNAP<span>!</span></span>
             </a>
@@ -217,7 +218,7 @@
                 <div class="footer-helpdesk">
                     <h4 data-en="Helpdesk" data-id="Bantuan">Bantuan</h4>
                     <ul>
-                        <li><a href="resend.html" data-en="Resend Softcopy" data-id="Kirim Ulang Softcopy">Kirim Ulang Softcopy</a></li>
+                        <li><a href="resend" data-en="Resend Softcopy" data-id="Kirim Ulang Softcopy">Kirim Ulang Softcopy</a></li>
                     </ul>
                 </div>
             </div>
