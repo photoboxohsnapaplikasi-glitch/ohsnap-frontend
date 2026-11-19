@@ -334,14 +334,16 @@
             reader.readAsDataURL(file);
         }
 
-        // Opsional Cloudflare Turnstile: isi Site Key di sini HANYA jika TURNSTILE_SECRET_KEY diaktifkan di Apps Script Properties
+        // Opsional Cloudflare Turnstile (proteksi anti-bot utama):
+        // Mengaktifkan Turnstile membutuhkan 2 langkah bersamaan:
+        // 1) Isi TURNSTILE_SITE_KEY di bawah ini, dan
+        // 2) Isi Script Property "TURNSTILE_SECRET_KEY" di Google Apps Script.
         const TURNSTILE_SITE_KEY = '';
         let turnstileWidgetId = null;
         let turnstileLoaded = false;
 
         function getActiveTurnstileSiteKey() {
-            const fromCms = (cms && typeof cms.turnstileSiteKey === 'string') ? cms.turnstileSiteKey.trim() : '';
-            return TURNSTILE_SITE_KEY.trim() || fromCms;
+            return TURNSTILE_SITE_KEY.trim();
         }
 
         function initTurnstileWidget() {

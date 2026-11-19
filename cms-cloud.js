@@ -240,7 +240,63 @@
     return dataObj;
   }
 
-  // 3-Way Merge array berbasis _uid: aman untuk array kosong [], tambah bersamaan, hapus semua, edit field, & ubah urutan
+  function isPrimitiveArray(arr) {
+    if (!Array.isArray(arr)) return false;
+    return arr.every(v => v === null || (typeof v !== 'object' && typeof v !== 'function'));
+  }
+
+  // 3-Way Merge untuk array primitif (misalnya array teks tanpa _uid): jaga tambahan kedua sisi & hormati penghapusan
+  function mergePrimitiveArray(baseArr, remoteArr, localArr, preferLocalOnBothChanged) {
+    const baseSet = new Set(baseArr);
+    const remoteSet = new Set(remoteArr);
+    const localSet = new Set(localArr);
+
+    const primary = preferLocalOnBothChanged ? localArr : remoteArr;
+    const secondary = preferLocalOnBothChanged ? remoteArr : localArr;
+    const primaryDeleted = new Set([...baseSet].filter(x => !(preferLocalOnBothChanged ? localSet : remoteSet).has(x)));
+    const secondaryDeleted = new Set([...baseSet].filter(x => !(preferLocalOnBothChanged ? remoteSet : localSet).has(x)));
+
+    const result = [];
+    const seen = new Set();
+
+    primary.forEach(item => {
+      if (secondaryDeleted.has(item)) return;
+      if (!seen.has(item)) {
+        seen.add(item);
+        result.push(item);
+      }
+    });
+
+    secondary.forEach((item, idx) => {
+      if (seen.has(item) || primaryDeleted.has(item)) return;
+      seen.add(item);
+      // Pertahankan posisi relatif di tengah bila item baru disisip di tengah
+      let inserted = false;
+      for (let p = idx - 1; p >= 0; p--) {
+        const pos = result.indexOf(secondary[p]);
+        if (pos !== -1) {
+          result.splice(pos + 1, 0, item);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) {
+        for (let n = idx + 1; n < secondary.length; n++) {
+          const pos = result.indexOf(secondary[n]);
+          if (pos !== -1) {
+            result.splice(pos, 0, item);
+            inserted = true;
+            break;
+          }
+        }
+      }
+      if (!inserted) result.push(item);
+    });
+
+    return result;
+  }
+
+  // 3-Way Merge array berbasis _uid: aman untuk array kosong [], hapus+edit, sisip di tengah, & ubah urutan
   function mergeUidArray(baseArr, remoteArr, localArr, preferLocalOnBothChanged) {
     const baseMap = new Map();
     const remoteMap = new Map();
@@ -275,9 +331,7 @@
             mergedMap.set(uid, deepClone(lItem));
           }
         }
-        // Jika dihapus di kedua perangkat -> tidak masuk mergedMap
       } else {
-        // Item baru yang tidak ada di base (tetap dipertahankan meski perangkat lain mengosongkan seluruh array!)
         if (inR && inL) {
           mergedMap.set(uid, deepMergeCMS(undefined, rItem, lItem, preferLocalOnBothChanged));
         } else if (inR) {
@@ -288,12 +342,16 @@
       }
     });
 
-    const baseSurviving = baseArr.filter(x => x && x._uid && mergedMap.has(x._uid)).map(x => x._uid);
-    const remoteSurvivingBase = remoteArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
-    const localSurvivingBase = localArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
+    // Deteksi perubahan urutan HANYA pada irisan item yang hadir di base, sisi tersebut, DAN hasil sekaligus
+    // (sehingga item yang dihapus di satu sisi tapi dipertahankan karena diedit di sisi lain TIDAK memicu false reorder)
+    const baseInRemote = baseArr.filter(x => x && x._uid && remoteMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
+    const remoteInBase = remoteArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
 
-    const remoteReordered = !isEqualJson(remoteSurvivingBase, baseSurviving);
-    const localReordered = !isEqualJson(localSurvivingBase, baseSurviving);
+    const baseInLocal = baseArr.filter(x => x && x._uid && localMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
+    const localInBase = localArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
+
+    const remoteReordered = !isEqualJson(remoteInBase, baseInRemote);
+    const localReordered = !isEqualJson(localInBase, baseInLocal);
 
     let primaryArr, secondaryArr;
     if (localReordered && !remoteReordered) {
@@ -316,12 +374,44 @@
         result.push(mergedMap.get(item._uid));
       }
     });
-    secondaryArr.forEach(item => {
-      if (item && item._uid && mergedMap.has(item._uid) && !seen.has(item._uid)) {
-        seen.add(item._uid);
-        result.push(mergedMap.get(item._uid));
+
+    // Sisipkan item dari secondaryArr (item baru di tengah atau item editan yang terhapus di primary) pada posisi relatif aslinya
+    secondaryArr.forEach((item, idx) => {
+      if (!item || !item._uid || !mergedMap.has(item._uid) || seen.has(item._uid)) return;
+      const uid = item._uid;
+      seen.add(uid);
+      const val = mergedMap.get(uid);
+
+      let inserted = false;
+      // Cari item terdekat sebelumnya di secondaryArr yang sudah ada di result
+      for (let p = idx - 1; p >= 0; p--) {
+        const prevUid = secondaryArr[p] && secondaryArr[p]._uid;
+        if (!prevUid) continue;
+        const pos = result.findIndex(x => x && x._uid === prevUid);
+        if (pos !== -1) {
+          result.splice(pos + 1, 0, val);
+          inserted = true;
+          break;
+        }
+      }
+      // Jika tidak ada pendahulu (misal disisip di awal array), cari penerus terdekat di secondaryArr
+      if (!inserted) {
+        for (let n = idx + 1; n < secondaryArr.length; n++) {
+          const nextUid = secondaryArr[n] && secondaryArr[n]._uid;
+          if (!nextUid) continue;
+          const pos = result.findIndex(x => x && x._uid === nextUid);
+          if (pos !== -1) {
+            result.splice(pos, 0, val);
+            inserted = true;
+            break;
+          }
+        }
+      }
+      if (!inserted) {
+        result.push(val);
       }
     });
+
     mergedMap.forEach((val, uid) => {
       if (!seen.has(uid)) {
         seen.add(uid);
@@ -344,6 +434,9 @@
         const hasAny = remote.length > 0 || local.length > 0;
         if (hasAny && isUidOrEmptyArray(remote) && isUidOrEmptyArray(local)) {
           return mergeUidArray([], remote, local, preferLocalOnBothChanged);
+        }
+        if (hasAny && isPrimitiveArray(remote) && isPrimitiveArray(local)) {
+          return mergePrimitiveArray([], remote, local, preferLocalOnBothChanged);
         }
         return deepClone(preferLocalOnBothChanged ? local : remote);
       }
@@ -370,7 +463,6 @@
     if (!localChanged) return deepClone(remote);
     if (!remoteChanged) return deepClone(local);
 
-    // Keduanya berubah terhadap base (termasuk kasus base === null atau salah satu jadi undefined/terhapus)
     if (remote === undefined || local === undefined) {
       return deepClone(preferLocalOnBothChanged ? local : remote);
     }
@@ -381,6 +473,9 @@
       const allValidUidOrEmpty = isUidOrEmptyArray(baseArr) && isUidOrEmptyArray(remote) && isUidOrEmptyArray(local);
       if (hasAnyElem && allValidUidOrEmpty) {
         return mergeUidArray(baseArr, remote, local, preferLocalOnBothChanged);
+      }
+      if (hasAnyElem && isPrimitiveArray(baseArr) && isPrimitiveArray(remote) && isPrimitiveArray(local)) {
+        return mergePrimitiveArray(baseArr, remote, local, preferLocalOnBothChanged);
       }
       return deepClone(preferLocalOnBothChanged ? local : remote);
     }
@@ -400,7 +495,6 @@
           return;
         }
         const mergedVal = deepMergeCMS(baseObj[k], remote[k], local[k], preferLocalOnBothChanged);
-        // Jangan tulis properti bernilai undefined agar key yang sengaja dihapus benar-benar hilang dari objek
         if (mergedVal !== undefined) {
           out[k] = mergedVal;
         }
@@ -697,6 +791,13 @@
               mergedFromRemote = true;
               continue;
             }
+          }
+
+          if (errBody.includes('PAYLOAD_TOO_LARGE:')) {
+            const sizeErr = new Error('Ukuran data CMS melebihi batas maksimal 1 MB. Kurangi teks/data base64 lalu simpan ulang.');
+            sizeErr.code = 'PAYLOAD_TOO_LARGE';
+            sizeErr.status = 413;
+            throw sizeErr;
           }
 
           if (errBody.includes('PASSWORD_CHANGE_REQUIRED:')) {
@@ -1029,7 +1130,7 @@
     }, 1000);
   }
 
-  // Riwayat Versi CMS (ambil 20 versi terakhir & pulihkan versi tertentu via RPC admin)
+  // Riwayat Versi CMS (ambil hingga 50 versi terakhir & pulihkan versi tertentu via RPC admin)
   async function listCmsHistory() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/list_cms_history_secure`, {
       method: 'POST',
@@ -1151,7 +1252,7 @@
     return await res.json();
   }
 
-  // Minta izin satu-kali-pakai untuk 1 file spesifik di Storage
+  // Minta izin sementara per-file (berlaku 2 menit & langsung dicabut setelah operasi selesai)
   async function requestStoragePermit(op, objectPath) {
     const token = getAdminToken();
     if (!token) {
@@ -1191,7 +1292,7 @@
     } catch (e) {}
   }
 
-  // Upload gambar/video ke Supabase Storage (1GB) dengan izin satu-kali-pakai per-file & Cache-Control 1 tahun
+  // Upload gambar/video ke Supabase Storage dengan izin sementara per-file & Cache-Control 1 tahun
   async function upload(fileOrBlob, folder, ext) {
     const cleanExt = (ext || 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'jpg';
     const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'];
@@ -1221,14 +1322,23 @@
   // Hapus file lama di Supabase Storage setelah simpan database sukses (mengembalikan { ok, error })
   async function removeFile(publicUrl) {
     let filePath = '';
+    let permitIssued = false;
     try {
       const marker = `/storage/v1/object/public/${BUCKET}/`;
       if (!publicUrl || typeof publicUrl !== 'string' || !publicUrl.includes(marker)) {
         return { ok: true, skipped: true };
       }
-      filePath = publicUrl.split(marker)[1];
-      if (!filePath) return { ok: true, skipped: true };
+      let rawPart = publicUrl.split(marker)[1] || '';
+      // Buang query string (?t=...) dan hash (#...) sebelum diproses
+      rawPart = rawPart.split('?')[0].split('#')[0].trim();
+      try { rawPart = decodeURIComponent(rawPart); } catch (de) {}
+      // Jika path tidak sesuai pola aman server, lewati agar tidak masuk daftar yatim permanen
+      if (!rawPart || !/^(img|video)\/[A-Za-z0-9._-]+$/.test(rawPart) || rawPart.includes('..')) {
+        return { ok: true, skipped: true };
+      }
+      filePath = rawPart;
       await requestStoragePermit('delete', filePath);
+      permitIssued = true;
       const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`, {
         method: 'DELETE',
         headers: BASE_HEADERS
@@ -1240,7 +1350,7 @@
     } catch (e) {
       return { ok: false, error: e && e.message ? e.message : String(e) };
     } finally {
-      if (filePath) await revokeStoragePermit(filePath);
+      if (permitIssued && filePath) await revokeStoragePermit(filePath);
     }
   }
 
