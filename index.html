@@ -7,6 +7,9 @@
     <title>OH SNAP! Photobox - Capture Your Fun Moments</title>
     <meta name="description" content="OH SNAP! Photobox - Photobox & Self-Photo Studio kekinian di berbagai pusat perbelanjaan Indonesia.">
     <link rel="icon" type="image/jpeg" href="images/logo-icon.jpg">
+    <link rel="preconnect" href="https://kbkayevpbeijuuufnrgt.supabase.co" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
@@ -287,7 +290,7 @@
                 <a href="story" class="btn-readmore" id="aboutBtn">Read more →</a>
             </div>
             <div class="about-img-box">
-                <img id="aboutImg" alt="Our Story Photo" onload="this.style.opacity='1'" onerror="this.style.opacity='0'">
+                <img id="aboutImg" loading="lazy" decoding="async" alt="Our Story Photo" onload="this.style.opacity='1'" onerror="this.style.opacity='0'">
             </div>
         </div>
     </section>
@@ -377,7 +380,7 @@
                         </div>
                     </div>
                     <div class="footer-map-click-layer"></div>
-                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="eager" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
+                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
                 </div>
             </div>
         </div>
@@ -609,17 +612,24 @@
                 let destQuery = known ? known.destQuery : ('Oh Snap Photobox ' + nm);
 
                 const mUrl = String(b.mapUrl || '').trim();
-                const coordMatch = mUrl.match(/(?:@|q=)(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-                if (coordMatch) {
+                const adminLat = parseFloat(b.lat);
+                const adminLng = parseFloat(b.lng);
+                if (!isNaN(adminLat) && !isNaN(adminLng)) {
+                    lat = adminLat;
+                    lng = adminLng;
+                }
+                const coordMatch = mUrl.match(/(?:@|q=|ll=|!3d)(-?\d+\.\d+)(?:,|!4d)\s*(-?\d+\.\d+)/);
+                if (coordMatch && (isNaN(adminLat) || isNaN(adminLng))) {
                     lat = parseFloat(coordMatch[1]);
                     lng = parseFloat(coordMatch[2]);
                 }
                 const pidMatch = mUrl.match(/query_place_id=([A-Za-z0-9_-]+)/);
                 if (pidMatch) placeId = pidMatch[1];
 
-                const cleanMapUrl = known
+                const safeCustomMapUrl = (mUrl && mUrl !== '#') ? OhSnapCloud.safeUrl(mUrl, '') : '';
+                const cleanMapUrl = safeCustomMapUrl || (known
                     ? (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(known.destQuery) + (known.placeId ? '&query_place_id=' + encodeURIComponent(known.placeId) : ''))
-                    : OhSnapCloud.safeUrl(mUrl, GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery));
+                    : (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery)));
 
                 return {
                     title: known ? known.name : ('OH SNAP! ' + nm + fl),
@@ -721,7 +731,8 @@
 
                 let mapTargetUrl = '';
                 if (/Android/i.test(navigator.userAgent)) {
-                    mapTargetUrl = 'geo:' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163) + '?q=' + encodeURIComponent(nearest.destQuery);
+                    const hasCoords = typeof nearest.lat === 'number' && typeof nearest.lng === 'number';
+                    mapTargetUrl = 'geo:' + (hasCoords ? (nearest.lat + ',' + nearest.lng) : '0,0') + '?q=' + encodeURIComponent(nearest.destQuery);
                 } else {
                     mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery);
                 }
@@ -767,12 +778,17 @@
                     const cachedRes = findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng);
                     if (cachedRes && cachedRes.branch) updateFooterMapPreview(cachedRes.branch, cachedRes.distanceKm);
                 }
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(pos) {
-                        saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
-                        const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
-                        if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
-                    }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                // Jangan tampilkan pop-up izin GPS otomatis saat baru buka web (hanya baca jika izin sudah 'granted')
+                if (navigator.geolocation && navigator.permissions && navigator.permissions.query) {
+                    navigator.permissions.query({ name: 'geolocation' }).then(function(perm) {
+                        if (perm && perm.state === 'granted') {
+                            navigator.geolocation.getCurrentPosition(function(pos) {
+                                saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
+                                const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
+                                if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
+                            }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                        }
+                    }).catch(function() {});
                 }
             } catch (e) {}
         })();
@@ -846,47 +862,67 @@
             // Render Studios (hanya jika data studio berubah agar gambar tidak berkedip)
             const studiosList = (cms.studios && cms.studios.length > 0) ? cms.studios : defaultCMS.studios;
             const currentStudioSig = JSON.stringify(studiosList);
+            const studioGridEl = document.getElementById('studioGrid');
             if (currentStudioSig !== lastStudioSig) {
                 lastStudioSig = currentStudioSig;
-                document.getElementById('studioGrid').innerHTML = studiosList.map(s => `
+                const prevScroll = studioGridEl.scrollLeft;
+                studioGridEl.innerHTML = studiosList.map(s => `
                     <div class="slide-item-studio">
                         <div class="card-item">
-                            ${OhSnapCloud.safeUrl(s.img, '') ? `<div style="width:100%; height:460px; overflow:hidden; background:#fff;"><img src="${escHtml(OhSnapCloud.safeUrl(s.img, ''))}" alt="${escHtml(s.title)}" style="width: 100%; height: 460px; object-fit: cover; display:block;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-box\\'></div>'"></div>` : `<div class="empty-portrait-box"></div>`}
+                            ${OhSnapCloud.safeUrl(s.img, '') ? `<div style="width:100%; height:460px; overflow:hidden; background:#fff;"><img src="${escHtml(OhSnapCloud.safeUrl(s.img, ''))}" alt="${escHtml(s.title)}" loading="lazy" decoding="async" width="400" height="460" style="width: 100%; height: 460px; object-fit: cover; display:block;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-box\\'></div>'"></div>` : `<div class="empty-portrait-box"></div>`}
                             <div class="card-body">
                                 <div>
-                                    <h3>${escHtml(s.title || 'Nama Studio')}</h3>
-                                    <p>${escHtml(s.desc || 'Deskripsi studio')}</p>
+                                    <h3 class="cms-studio-title">${escHtml(isEn ? (s.titleEn || s.title || 'Studio Name') : (s.title || 'Nama Studio'))}</h3>
+                                    <p class="cms-studio-desc">${escHtml(isEn ? (s.descEn || s.desc || 'Studio description') : (s.desc || 'Deskripsi studio'))}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 `).join('');
+                studioGridEl.scrollLeft = prevScroll;
+            } else {
+                const titles = studioGridEl.querySelectorAll('.cms-studio-title');
+                const descs = studioGridEl.querySelectorAll('.cms-studio-desc');
+                studiosList.forEach((s, i) => {
+                    if (titles[i]) titles[i].textContent = isEn ? (s.titleEn || s.title || 'Studio Name') : (s.title || 'Nama Studio');
+                    if (descs[i]) descs[i].textContent = isEn ? (s.descEn || s.desc || 'Studio description') : (s.desc || 'Deskripsi studio');
+                });
             }
 
             // Render Promos (hanya jika data promo berubah)
             const promosList = (cms.promos && cms.promos.length > 0) ? cms.promos : defaultCMS.promos;
             const currentPromoSig = JSON.stringify(promosList);
+            const promoGridEl = document.getElementById('promoGrid');
             if (currentPromoSig !== lastPromoSig) {
                 lastPromoSig = currentPromoSig;
-                document.getElementById('promoGrid').innerHTML = promosList.map(p => `
+                const prevScroll = promoGridEl.scrollLeft;
+                promoGridEl.innerHTML = promosList.map(p => `
                     <div class="slide-item-promo">
                         <div class="card-item">
-                            ${OhSnapCloud.safeUrl(p.img, '') ? `<div style="width:100%; height:460px; overflow:hidden; background:#fff;"><img src="${escHtml(OhSnapCloud.safeUrl(p.img, ''))}" alt="${escHtml(p.title)}" style="width: 100%; height: 460px; object-fit: cover; display:block;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-box\\'></div>'"></div>` : `<div class="empty-portrait-box"></div>`}
+                            ${OhSnapCloud.safeUrl(p.img, '') ? `<div style="width:100%; height:460px; overflow:hidden; background:#fff;"><img src="${escHtml(OhSnapCloud.safeUrl(p.img, ''))}" alt="${escHtml(p.title)}" loading="lazy" decoding="async" width="400" height="460" style="width: 100%; height: 460px; object-fit: cover; display:block;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-box\\'></div>'"></div>` : `<div class="empty-portrait-box"></div>`}
                             <div class="card-body">
                                 <div>
                                     <span class="badge-tag">${escHtml(p.badge || 'PROMO')}</span>
-                                    <h3>${escHtml(p.title || 'Judul Promo')}</h3>
-                                    <p>${escHtml(p.desc || 'Keterangan promo')}</p>
+                                    <h3 class="cms-promo-title">${escHtml(isEn ? (p.titleEn || p.title || 'Promo Title') : (p.title || 'Judul Promo'))}</h3>
+                                    <p class="cms-promo-desc">${escHtml(isEn ? (p.descEn || p.desc || 'Promo description') : (p.desc || 'Keterangan promo'))}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 `).join('');
+                promoGridEl.scrollLeft = prevScroll;
+            } else {
+                const titles = promoGridEl.querySelectorAll('.cms-promo-title');
+                const descs = promoGridEl.querySelectorAll('.cms-promo-desc');
+                promosList.forEach((p, i) => {
+                    if (titles[i]) titles[i].textContent = isEn ? (p.titleEn || p.title || 'Promo Title') : (p.title || 'Judul Promo');
+                    if (descs[i]) descs[i].textContent = isEn ? (p.descEn || p.desc || 'Promo description') : (p.desc || 'Keterangan promo');
+                });
             }
 
             // Render Videos (hanya jika data video berubah agar video tidak reload saat ganti bahasa)
             const videosList = (cms.videos && cms.videos.length > 0) ? cms.videos : defaultCMS.videos;
-            const currentVideoSig = JSON.stringify(videosList) + '_' + currentLang;
+            const currentVideoSig = JSON.stringify(videosList);
             if (currentVideoSig !== lastVideoSig) {
                 lastVideoSig = currentVideoSig;
                 document.getElementById('videoGrid').innerHTML = videosList.map(v => {
@@ -942,6 +978,9 @@
                     }
                     attachAutoPauseListeners();
                 }, 50);
+            } else {
+                const btnText = currentLang === 'en' ? '🔗 Visit Video Link →' : '🔗 Buka Link Video →';
+                document.querySelectorAll('#videoGrid .video-pause-link-btn').forEach(a => { a.textContent = btnText; });
             }
 
             if (cms && cms.footer) {

@@ -1,0 +1,60 @@
+{
+  "colors": {
+    "primary": "#ff1493",
+    "secondary": "#2b4c7e",
+    "bg": "#fff0f5",
+    "footer": "#18171d"
+  },
+  "banners": {
+    "home": {
+      "titleId": "LANGSUNG CETAK BAWA PULANG",
+      "titleEn": "INSTANT PRINT & TAKE IT HOME",
+      "subId": "Photobox & Self-Photo Studio kekinian.",
+      "subEn": "Trendy Photobox Studio.",
+      "imgUrl": ""
+    },
+    "about": {
+      "titleId": "About Our <span>Story</span>",
+      "titleEn": "About Our <span>Story</span>",
+      "subId": "OH SNAP! Photobox hadir dari semangat untuk mengabadikan setiap momen hangat, spontan, dan tak terlupakan bersama orang-orang tersayang.",
+      "subEn": "OH SNAP! Photobox was born from the spirit of capturing warm, spontaneous, and unforgettable moments with your favorite people.",
+      "btnId": "Read more \u2192",
+      "btnEn": "Read more \u2192",
+      "imgUrl": ""
+    },
+    "layanan": {
+      "titleId": "Layanan <span>Kami</span>",
+      "titleEn": "Our <span>Services</span>",
+      "subId": "Pilih paket sesi foto terbaik.",
+      "subEn": "Choose the best photo session package.",
+      "imgUrl": ""
+    },
+    "frame": {
+      "titleId": "Koleksi <span>Frame</span>",
+      "titleEn": "Exclusive <span>Frame</span>",
+      "subId": "Desain frame tematik yang selalu update setiap bulan!",
+      "subEn": "Thematic frame designs updated every month!",
+      "imgUrl": ""
+    },
+    "lokasi": {
+      "titleId": "Lokasi <span>Studio</span>",
+      "titleEn": "Our <span>Locations</span>",
+      "subId": "Kunjungi cabang terdekat kami di kotamu.",
+      "subEn": "Visit our nearest branch in your city.",
+      "imgUrl": ""
+    }
+  },
+  "footer": {
+    "brand": "OH SNAP! Photobox Group",
+    "branches": "Kediri Mall Lt.5, Plaza Cilacap Lt.3, Laksana Baru Lt.3, Plaza Pekalongan Lt.2, Yogya Pemalang Lt.3",
+    "igName": "@ohsnap_photobox",
+    "igUrl": "https://instagram.com/ohsnap_photobox",
+    "ttName": "@ohsnap_photobox",
+    "ttUrl": "https://tiktok.com/@ohsnap_photobox",
+    "cardTitleId": "Temukan Studio OH SNAP! Terdekat:",
+    "cardTitleEn": "Find nearby OH SNAP! Studio:",
+    "cardDescId": "Temukan booth dan studio terdekat di kotamu untuk abadikan momen serumu hari ini!",
+    "cardDescEn": "Find the nearest booth and studio in your city to capture your special moments today!",
+    "copyright": "\u00a9 2026 OH SNAP! Photobox. All rights reserved."
+  }
+}

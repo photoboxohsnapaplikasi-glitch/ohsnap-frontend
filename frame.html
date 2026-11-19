@@ -7,6 +7,9 @@
     <title>Frame Layout - OH SNAP! Photobox</title>
     <meta name="description" content="Koleksi Frame Eksklusif OH SNAP! Photobox - Puluhan desain frame tematik yang selalu update setiap bulan.">
     <link rel="icon" type="image/jpeg" href="images/logo-icon.jpg">
+    <link rel="preconnect" href="https://kbkayevpbeijuuufnrgt.supabase.co" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
@@ -265,7 +268,7 @@
                         </div>
                     </div>
                     <div class="footer-map-click-layer"></div>
-                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="eager" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
+                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
                 </div>
             </div>
         </div>
@@ -289,6 +292,7 @@
         let cms = null;
         try { cms = JSON.parse(localStorage.getItem('ohsnap_cms_data')); } catch (e) {}
         let lastRenderedSignature = '';
+        let lastFramesGridSig = '';
 
         function escHtml(str) {
             if (str === null || str === undefined) return '';
@@ -409,17 +413,24 @@
                 let destQuery = known ? known.destQuery : ('Oh Snap Photobox ' + nm);
 
                 const mUrl = String(b.mapUrl || '').trim();
-                const coordMatch = mUrl.match(/(?:@|q=)(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-                if (coordMatch) {
+                const adminLat = parseFloat(b.lat);
+                const adminLng = parseFloat(b.lng);
+                if (!isNaN(adminLat) && !isNaN(adminLng)) {
+                    lat = adminLat;
+                    lng = adminLng;
+                }
+                const coordMatch = mUrl.match(/(?:@|q=|ll=|!3d)(-?\d+\.\d+)(?:,|!4d)\s*(-?\d+\.\d+)/);
+                if (coordMatch && (isNaN(adminLat) || isNaN(adminLng))) {
                     lat = parseFloat(coordMatch[1]);
                     lng = parseFloat(coordMatch[2]);
                 }
                 const pidMatch = mUrl.match(/query_place_id=([A-Za-z0-9_-]+)/);
                 if (pidMatch) placeId = pidMatch[1];
 
-                const cleanMapUrl = known
+                const safeCustomMapUrl = (mUrl && mUrl !== '#') ? OhSnapCloud.safeUrl(mUrl, '') : '';
+                const cleanMapUrl = safeCustomMapUrl || (known
                     ? (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(known.destQuery) + (known.placeId ? '&query_place_id=' + encodeURIComponent(known.placeId) : ''))
-                    : OhSnapCloud.safeUrl(mUrl, GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery));
+                    : (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery)));
 
                 return {
                     title: known ? known.name : ('OH SNAP! ' + nm + fl),
@@ -529,7 +540,8 @@
 
                 let mapTargetUrl = '';
                 if (/Android/i.test(navigator.userAgent)) {
-                    mapTargetUrl = 'geo:' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163) + '?q=' + encodeURIComponent(nearest.destQuery);
+                    const hasCoords = typeof nearest.lat === 'number' && typeof nearest.lng === 'number';
+                    mapTargetUrl = 'geo:' + (hasCoords ? (nearest.lat + ',' + nearest.lng) : '0,0') + '?q=' + encodeURIComponent(nearest.destQuery);
                 } else {
                     mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery) + '&ll=' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163);
                 }
@@ -575,12 +587,17 @@
                     const cachedRes = findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng);
                     if (cachedRes && cachedRes.branch) updateFooterMapPreview(cachedRes.branch, cachedRes.distanceKm);
                 }
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(pos) {
-                        saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
-                        const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
-                        if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
-                    }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                // Jangan tampilkan pop-up izin GPS otomatis saat baru buka web (hanya baca jika izin sudah 'granted')
+                if (navigator.geolocation && navigator.permissions && navigator.permissions.query) {
+                    navigator.permissions.query({ name: 'geolocation' }).then(function(perm) {
+                        if (perm && perm.state === 'granted') {
+                            navigator.geolocation.getCurrentPosition(function(pos) {
+                                saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
+                                const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
+                                if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
+                            }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                        }
+                    }).catch(function() {});
                 }
             } catch (e) {}
         })();
@@ -602,20 +619,35 @@
                 document.getElementById('heroBannerBg').style.backgroundImage = 'none';
             }
 
-            document.getElementById('framesGrid').innerHTML = list.map(f => `
-                <div class="slide-item-frame">
-                    <div class="frame-card">
-                        ${OhSnapCloud.safeUrl(f.img, '') ? `<img src="${escHtml(OhSnapCloud.safeUrl(f.img, ''))}" alt="${escHtml(f.title)}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'empty-portrait-frame\\'></div>';">` : `<div class="empty-portrait-frame"></div>`}
-                        <div class="frame-info">
-                            <div>
-                                <span class="frame-cat">${escHtml(f.category || 'Frame')}</span>
-                                <h3>${escHtml(f.title)}</h3>
-                                <p>${escHtml(f.desc || '')}</p>
+            const isEn = currentLang === 'en';
+            const framesGridEl = document.getElementById('framesGrid');
+            const currentFramesSig = JSON.stringify(list);
+            if (currentFramesSig !== lastFramesGridSig) {
+                lastFramesGridSig = currentFramesSig;
+                const prevScroll = framesGridEl.scrollLeft;
+                framesGridEl.innerHTML = list.map(f => `
+                    <div class="slide-item-frame">
+                        <div class="frame-card">
+                            ${OhSnapCloud.safeUrl(f.img, '') ? `<img src="${escHtml(OhSnapCloud.safeUrl(f.img, ''))}" alt="${escHtml(f.title)}" loading="lazy" decoding="async" width="320" height="420" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'empty-portrait-frame\\'></div>';">` : `<div class="empty-portrait-frame"></div>`}
+                            <div class="frame-info">
+                                <div>
+                                    <span class="frame-cat">${escHtml(f.category || 'Frame')}</span>
+                                    <h3 class="cms-frame-title">${escHtml(isEn ? (f.titleEn || f.title) : f.title)}</h3>
+                                    <p class="cms-frame-desc">${escHtml(isEn ? (f.descEn || f.desc || '') : (f.desc || ''))}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+                framesGridEl.scrollLeft = prevScroll;
+            } else {
+                const fTitles = framesGridEl.querySelectorAll('.cms-frame-title');
+                const fDescs = framesGridEl.querySelectorAll('.cms-frame-desc');
+                list.forEach((f, i) => {
+                    if (fTitles[i]) fTitles[i].textContent = isEn ? (f.titleEn || f.title) : f.title;
+                    if (fDescs[i]) fDescs[i].textContent = isEn ? (f.descEn || f.desc || '') : (f.desc || '');
+                });
+            }
 
             updateFrameSliderButtons(list.length);
             requestAnimationFrame(() => updateFrameSliderButtons(list.length));

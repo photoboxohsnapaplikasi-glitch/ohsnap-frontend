@@ -1,4 +1,4 @@
-/* OH SNAP! - Klien Cloud Bersama (Supabase Realtime + 3-Way Multi-Device Instant Sync) */
+/* OH SNAP! - Klien Cloud Bersama (Supabase Realtime + 3-Way Multi-Device Instant Sync + Hardened Security) */
 (function () {
   const SUPABASE_URL = 'https://kbkayevpbeijuuufnrgt.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_AG1wxrYq1moobWYJjC6htQ_TB-Siffl';
@@ -35,13 +35,13 @@
     const raw = String(text || '').trim();
     if (!raw) throw new Error('Server Apps Script mengembalikan respons kosong.');
     if (raw.charAt(0) === '<') {
-      throw new Error('Apps Script mengembalikan halaman HTML (bukan data). Biasanya karena Deploy belum diset "Siapa yang memiliki akses: Siapa saja" atau belum Deploy versi baru.');
+      throw new Error('Server sedang melakukan pemeliharaan atau izin akses Web App belum sesuai.');
     }
     try { return JSON.parse(raw); }
-    catch (e) { throw new Error('Respons Apps Script bukan JSON yang valid.'); }
+    catch (e) { throw new Error('Respons server tidak valid.'); }
   }
 
-  // GET data (dengan token admin) / POST aksi ke Apps Script, dengan timeout
+  // GET (ping) / POST aksi ke Apps Script, dengan timeout dan credentials: 'omit'
   async function sheetFetch(method, payloadOrParams, timeoutMs) {
     const chk = checkSheetUrl(SHEET_SCRIPT_URL);
     if (!chk.ok) { const e = new Error(chk.reason); e.code = 'BAD_URL'; throw e; }
@@ -66,11 +66,19 @@
           signal: ctrl ? ctrl.signal : undefined
         });
       }
-      if (!res.ok) throw new Error('HTTP ' + res.status + ' dari Apps Script.');
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' dari server.');
       return parseSheetResponse(await res.text());
     } catch (e) {
-      if (e && e.name === 'AbortError') throw new Error('Permintaan ke Apps Script timeout (>' + Math.round((timeoutMs || 25000) / 1000) + ' detik).');
-      if (e instanceof TypeError) throw new Error('Gagal terhubung ke Apps Script (jaringan/CORS). Pastikan URL Web App benar & akses "Siapa saja".');
+      if (e && e.name === 'AbortError') {
+        const te = new Error('Permintaan ke server timeout (>' + Math.round((timeoutMs || 25000) / 1000) + ' detik).');
+        te.code = 'TIMEOUT';
+        throw te;
+      }
+      if (e instanceof TypeError) {
+        const ne = new Error('Gagal terhubung ke server (jaringan/CORS).');
+        ne.code = 'NETWORK';
+        throw ne;
+      }
       throw e;
     } finally {
       if (timer) clearTimeout(timer);
@@ -86,6 +94,7 @@
   let baseCloudData = null;
   let lastKnownCloudTime = 0;
   let lastKnownUpdatedAtIso = '';
+  let lastPullCheckAt = 0;
   let saveQueue = Promise.resolve();
   let isSavingInFlight = false;
 
@@ -113,16 +122,26 @@
       .replace(/&lt;br\s*\/?&gt;/gi, '<br>');
   }
 
-  // Sanitasi URL: hanya izinkan http://, https://, atau path lokal yang aman (blokir javascript:, vbscript:, data:text/html)
+  // Percent-encode tanda kutip & tanda kurung agar aman di konteks atribut HTML maupun CSS url("...")
+  function encodeCssUnsafeChars(u) {
+    return u
+      .replace(/"/g, '%22')
+      .replace(/'/g, '%27')
+      .replace(/\(/g, '%28')
+      .replace(/\)/g, '%29')
+      .replace(/\\/g, '%5C');
+  }
+
+  // Sanitasi URL: hanya izinkan http://, https://, atau path lokal yang aman (blokir javascript:, vbscript:, data:text/html, //host)
   function safeUrl(url, fallback) {
     const fb = fallback !== undefined ? fallback : '#';
     if (!url || typeof url !== 'string') return fb;
     const clean = url.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim();
-    if (!clean || clean === '#') return fb;
+    if (!clean || clean === '#' || clean.startsWith('//')) return fb;
     const probe = clean.replace(/\s+/g, '');
     if (/^[a-z][a-z0-9+.\-]*:/i.test(probe)) {
-      if (/^https?:\/\//i.test(probe)) return clean;
-      if (/^blob:/i.test(probe)) return clean;
+      if (/^https?:\/\//i.test(probe)) return encodeCssUnsafeChars(clean);
+      if (/^blob:/i.test(probe)) return encodeCssUnsafeChars(clean);
       if (/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(probe)) return clean;
       if (/^data:video\/(mp4|webm|quicktime);base64,/i.test(probe)) return clean;
       return fb;
@@ -171,7 +190,7 @@
     try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
   }
 
-  // 3-Way Field-Level Merge (CRDT/OT style): menggabungkan editan bersamaan dari 2 device tanpa saling menimpa
+  // 3-Way Field-Level Merge: menggabungkan editan bersamaan dari beberapa device tanpa saling menimpa
   function deepMergeCMS(base, remote, local, preferLocalOnBothChanged) {
     if (isEqualJson(remote, local)) return deepClone(remote);
     if (base === undefined || base === null) {
@@ -184,7 +203,6 @@
     if (!localChanged) return deepClone(remote);
     if (!remoteChanged) return deepClone(local);
 
-    // Keduanya berubah: gabungkan secara rekursif per-field atau per-item array
     if (Array.isArray(remote) && Array.isArray(local)) {
       const baseArr = Array.isArray(base) ? base : [];
       const minLen = Math.min(remote.length, local.length);
@@ -222,7 +240,6 @@
       return out;
     }
 
-    // Leaf value diubah di kedua device pada detik yang sama
     return deepClone(preferLocalOnBothChanged ? local : remote);
   }
 
@@ -260,8 +277,9 @@
     } catch (e) {}
   }
 
-  // Ambil data CMS dari cloud dengan timeout 8 detik
-  async function load(force) {
+  // Ambil data CMS dari cloud dengan timeout 8 detik. opts.skipSyncTime = true untuk cek read-only tanpa mengubah state global.
+  async function load(force, opts) {
+    const skipSyncTime = Boolean(opts && opts.skipSyncTime);
     if (!force && cache && Date.now() - cacheAt < 1200) return cache;
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
@@ -271,34 +289,86 @@
         cache: 'no-store',
         signal: ctrl ? ctrl.signal : undefined
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 120));
+      if (!res.ok) {
+        const err = new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 120));
+        err.status = res.status;
+        throw err;
+      }
       const rows = await res.json();
       if (Array.isArray(rows) && rows[0] && rows[0].data && Object.keys(rows[0].data).length > 0) {
-        cache = stripSensitiveForPublic(rows[0].data);
+        const cleanData = stripSensitiveForPublic(rows[0].data);
         if (rows[0].updated_at) {
-          lastKnownUpdatedAtIso = String(rows[0].updated_at);
           const dbTs = new Date(rows[0].updated_at).getTime();
-          if (!cache.lastUpdated || dbTs > Number(cache.lastUpdated)) {
-            cache.lastUpdated = Math.max(Number(cache.lastUpdated || 0), dbTs);
+          if (!cleanData.lastUpdated || dbTs > Number(cleanData.lastUpdated)) {
+            cleanData.lastUpdated = Math.max(Number(cleanData.lastUpdated || 0), dbTs);
           }
+          if (!skipSyncTime) lastKnownUpdatedAtIso = String(rows[0].updated_at);
         }
-        if (cache.lastUpdated) setKnownCloudTime(cache.lastUpdated);
-        if (!baseCloudData) setBaseCloudData(cache);
+        if (!skipSyncTime) {
+          cache = cleanData;
+          cacheAt = Date.now();
+          if (cleanData.lastUpdated) setKnownCloudTime(cleanData.lastUpdated);
+          if (!baseCloudData) setBaseCloudData(cleanData);
+        }
+        return cleanData;
       } else {
-        cache = null;
+        if (!skipSyncTime) {
+          cache = null;
+          cacheAt = Date.now();
+        }
+        return null;
       }
-      cacheAt = Date.now();
-      return cache;
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
 
-  // Dipakai semua halaman frontend: ambil data terbaru dari cloud & bersihkan dari properti sensitif
-  async function pullIfNewer() {
+  // Cek ringan updated_at terlebih dahulu sebelum mengunduh penuh data CMS (hemat kuota egress Supabase)
+  async function pullIfNewer(forceFull) {
     try {
-      const remote = await load(false);
-      if (!remote || Object.keys(remote).length === 0) return null;
+      const now = Date.now();
+      let cachedLocal = null;
+      let localSyncedAt = 0;
+      try {
+        const raw = localStorage.getItem('ohsnap_cms_data');
+        if (raw) cachedLocal = JSON.parse(raw);
+        localSyncedAt = Number(localStorage.getItem('ohsnap_cloud_synced_at') || 0);
+      } catch (e) {}
+
+      // Jika baru dicek < 1500ms lalu dan data lokal sudah ada, kembalikan langsung tanpa duplikasi request
+      if (!forceFull && cachedLocal && now - lastPullCheckAt < 1500) {
+        return cachedLocal;
+      }
+      lastPullCheckAt = now;
+
+      if (!forceFull && cachedLocal && localSyncedAt > 0) {
+        const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = ctrl ? setTimeout(() => ctrl.abort(), 5000) : null;
+        try {
+          const headRes = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.1&select=updated_at`, {
+            headers: BASE_HEADERS,
+            cache: 'no-store',
+            signal: ctrl ? ctrl.signal : undefined
+          });
+          if (headRes.ok) {
+            const headRows = await headRes.json();
+            if (Array.isArray(headRows) && headRows[0] && headRows[0].updated_at) {
+              const remoteIso = String(headRows[0].updated_at);
+              const remoteMs = new Date(remoteIso).getTime();
+              lastKnownUpdatedAtIso = remoteIso;
+              if (remoteMs <= localSyncedAt + 50) {
+                return cachedLocal;
+              }
+            }
+          }
+        } catch (he) {
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      }
+
+      const remote = await load(true);
+      if (!remote || Object.keys(remote).length === 0) return cachedLocal;
       const publicClean = stripSensitiveForPublic(remote);
       const remoteTime = Number(remote.lastUpdated || 0);
       try {
@@ -310,6 +380,16 @@
       return publicClean;
     } catch (e) {
       console.warn('[OhSnapCloud] gagal ambil data cloud:', e.message || e);
+      // Fallback opsional ke snapshot statis jika localStorage kosong dan Supabase sedang pause/offline
+      try {
+        if (!localStorage.getItem('ohsnap_cms_data')) {
+          const snapRes = await fetch('content-snapshot.json', { cache: 'no-cache' });
+          if (snapRes.ok) {
+            const snap = stripSensitiveForPublic(await snapRes.json());
+            if (snap && Object.keys(snap).length > 0) return snap;
+          }
+        }
+      } catch (se) {}
       return null;
     }
   }
@@ -344,12 +424,11 @@
     } catch (e) {}
   }
 
-  // Simpan data CMS ke cloud secara berurutan (antrean mutex) dengan 3-Way Auto-Merge jika diedit bersamaan di device lain
+  // Simpan data CMS ke cloud secara berurutan (antrean mutex) dengan 3-Way Auto-Merge jika diedit bersamaan
   function save(data, expectedMinTime, forceOverwrite) {
-    if (expectedMinTime !== undefined && expectedMinTime !== null) {
-      setKnownCloudTime(expectedMinTime);
-    }
     const localSnapshot = stripSensitiveForPublic(data);
+    delete localSnapshot.lastUpdated; // Server yang menentukan timestamp resmi
+
     const task = saveQueue.catch(() => {}).then(async () => {
       const token = getAdminToken();
       if (!token) {
@@ -366,10 +445,9 @@
 
         if (forceOverwrite) {
           try {
-            const latest = await load(true);
+            const latest = await load(true, { skipSyncTime: true });
             if (latest && latest.lastUpdated) {
               minTimeToUse = Math.max(minTimeToUse, Number(latest.lastUpdated));
-              setKnownCloudTime(minTimeToUse);
             }
           } catch (e) {}
         }
@@ -427,13 +505,12 @@
 
           const errBody = await rpcRes.text();
           if (errBody.includes('CONFLICT:')) {
-            // Device lain baru saja menyimpan ke Cloud -> ambil data terbaru & lakukan 3-Way Field-Level Merge otomatis!
-            const latestRemote = await load(true);
+            const latestRemote = await load(true, { skipSyncTime: true });
             if (latestRemote && Object.keys(latestRemote).length > 0) {
               const baseline = baseCloudData || latestRemote;
               payloadToSend = deepMergeCMS(baseline, latestRemote, payloadToSend, true);
-              payloadToSend.lastUpdated = Date.now();
-              minTimeToUse = Number(latestRemote.lastUpdated || Date.now());
+              delete payloadToSend.lastUpdated;
+              minTimeToUse = Number(latestRemote.lastUpdated || 0);
               setKnownCloudTime(minTimeToUse);
               mergedFromRemote = true;
               continue;
@@ -463,7 +540,7 @@
   }
 
   // ==========================================================================
-  // LIVE REALTIME SYNC ENGINE (Supabase WebSocket + Ultra-Light 1.5s Check)
+  // LIVE REALTIME SYNC ENGINE (Supabase WebSocket + Ultra-Light 2s Delta Check)
   // ==========================================================================
   let liveListeners = [];
   let liveStarted = false;
@@ -558,6 +635,7 @@
           }));
         } catch (e) {}
 
+        checkCloudDelta('realtime-connected');
         if (realtimeHeartbeat) clearInterval(realtimeHeartbeat);
         realtimeHeartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -624,10 +702,14 @@
 
     connectSupabaseRealtime();
 
+    // Cek ringan select=updated_at (~40 byte) HANYA jika WebSocket Realtime sedang tidak terhubung (hemat kuota Supabase Free)
     if (fastPollTimer) clearInterval(fastPollTimer);
     fastPollTimer = setInterval(() => {
-      checkCloudDelta('fast-poll');
-    }, 1500);
+      const wsConnected = realtimeWs && realtimeWs.readyState === WebSocket.OPEN;
+      if (!wsConnected) {
+        checkCloudDelta('fast-poll-fallback');
+      }
+    }, 5000);
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
@@ -661,7 +743,11 @@
       headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ p_token: getAdminToken() })
     });
-    if (!res.ok) throw new Error('Gagal memuat daftar admin (' + res.status + ')');
+    if (!res.ok) {
+      const err = new Error('Gagal memuat daftar admin (' + res.status + ')');
+      err.status = res.status;
+      throw err;
+    }
     return await res.json();
   }
 
@@ -674,6 +760,23 @@
         p_name: name,
         p_username: username,
         p_password: password
+      })
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg.slice(0, 180));
+    }
+    return await res.json();
+  }
+
+  async function changeAdminPassword(oldPassword, newPassword) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/change_admin_password_secure`, {
+      method: 'POST',
+      headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        p_token: getAdminToken(),
+        p_old_password: oldPassword,
+        p_new_password: newPassword
       })
     });
     if (!res.ok) {
@@ -719,7 +822,7 @@
     if (!res.ok) {
       const msg = await res.text();
       const err = new Error('Izin Storage ditolak (' + res.status + '): ' + msg.slice(0, 120));
-      err.status = res.status;
+      err.status = msg.includes('UNAUTHORIZED') ? 401 : res.status;
       throw err;
     }
   }
@@ -739,7 +842,7 @@
     } catch (e) {}
   }
 
-  // Upload gambar/video ke Supabase Storage (1GB) dengan izin satu-kali-pakai per-file
+  // Upload gambar/video ke Supabase Storage (1GB) dengan izin satu-kali-pakai per-file & Cache-Control 1 tahun
   async function upload(fileOrBlob, folder, ext) {
     const cleanExt = (ext || 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'jpg';
     const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'];
@@ -754,7 +857,8 @@
       const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
         method: 'POST',
         headers: Object.assign({}, BASE_HEADERS, {
-          'Content-Type': fileOrBlob.type || 'application/octet-stream'
+          'Content-Type': fileOrBlob.type || 'application/octet-stream',
+          'cache-control': 'max-age=31536000'
         }),
         body: fileOrBlob
       });
@@ -765,20 +869,27 @@
     }
   }
 
-  // Hapus file lama di Supabase Storage setelah simpan database sukses
+  // Hapus file lama di Supabase Storage setelah simpan database sukses (mengembalikan { ok, error })
   async function removeFile(publicUrl) {
     let filePath = '';
     try {
       const marker = `/storage/v1/object/public/${BUCKET}/`;
-      if (!publicUrl || typeof publicUrl !== 'string' || !publicUrl.includes(marker)) return;
+      if (!publicUrl || typeof publicUrl !== 'string' || !publicUrl.includes(marker)) {
+        return { ok: true, skipped: true };
+      }
       filePath = publicUrl.split(marker)[1];
-      if (!filePath) return;
+      if (!filePath) return { ok: true, skipped: true };
       await requestStoragePermit('delete', filePath);
-      await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`, {
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`, {
         method: 'DELETE',
         headers: BASE_HEADERS
       });
+      if (!res.ok && res.status !== 404) {
+        return { ok: false, error: 'HTTP ' + res.status };
+      }
+      return { ok: true };
     } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
     } finally {
       if (filePath) await revokeStoragePermit(filePath);
     }
@@ -801,6 +912,7 @@
     save,
     listAdmins,
     addAdmin,
+    changeAdminPassword,
     deleteAdmin,
     upload,
     removeFile,

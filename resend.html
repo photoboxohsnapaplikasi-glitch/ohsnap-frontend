@@ -7,6 +7,9 @@
     <title>Resend Softcopy - OH SNAP! Photobox</title>
     <meta name="description" content="Permintaan Resend Softcopy Foto OH SNAP! Photobox.">
     <link rel="icon" type="image/jpeg" href="images/logo-icon.jpg">
+    <link rel="preconnect" href="https://kbkayevpbeijuuufnrgt.supabase.co" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
@@ -148,17 +151,21 @@
             <p class="subtitle" data-en="Please fill out the form below accurately" data-id="Mohon isi form di bawah ini dengan data yang benar">Mohon isi form di bawah ini dengan data yang benar</p>
             
             <form id="resendForm" onsubmit="submitResend(event)">
+                <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;" aria-hidden="true">
+                    <label for="resWebsite">Website</label>
+                    <input type="text" id="resWebsite" name="website" tabindex="-1" autocomplete="off" value="">
+                </div>
                 <div class="form-group">
                     <label data-en="Full Name" data-id="Nama Lengkap">Nama Lengkap</label>
-                    <input type="text" id="resName" required placeholder="Masukkan nama lengkap">
+                    <input type="text" id="resName" required maxlength="100" autocomplete="name" placeholder="Masukkan nama lengkap">
                 </div>
                 <div class="form-group">
                     <label data-en="Active Email" data-id="Alamat Email Aktif">Alamat Email Aktif</label>
-                    <input type="email" id="resEmail" required placeholder="contoh@gmail.com">
+                    <input type="email" id="resEmail" required maxlength="150" autocomplete="email" inputmode="email" placeholder="contoh@gmail.com">
                 </div>
                 <div class="form-group">
                     <label data-en="WhatsApp Number" data-id="Nomor WhatsApp">Nomor WhatsApp</label>
-                    <input type="text" id="resWa" required placeholder="0812xxxxxxxx">
+                    <input type="tel" id="resWa" required maxlength="25" autocomplete="tel" inputmode="tel" placeholder="0812xxxxxxxx">
                 </div>
                 <div class="form-group">
                     <label data-en="Studio / Branch Location" data-id="Lokasi Cabang Studio">Lokasi Cabang Studio</label>
@@ -190,6 +197,7 @@
                     </div>
                 </div>
 
+                <div id="resendStatusMsg" role="status" aria-live="polite" style="display:none; margin-bottom:14px; padding:12px 14px; border-radius:12px; font-size:0.88rem; font-weight:600; line-height:1.5;"></div>
                 <button type="submit" id="submitBtn" class="btn-submit" data-en="Submit Request" data-id="Kirim Permintaan">Kirim Permintaan</button>
             </form>
         </div>
@@ -241,7 +249,7 @@
                         </div>
                     </div>
                     <div class="footer-map-click-layer"></div>
-                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="eager" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
+                    <iframe id="footerMapIframe" class="footer-map-iframe" src="https://maps.google.com/maps?q=Oh+Snap+Photobox+Kediri,+Kediri+Mall+Lt.5,+Jl.+Hayam+Wuruk+No.46,+Kota+Kediri&t=&z=16&ie=UTF8&iwloc=&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="OH SNAP! Photobox Map"></iframe>
                 </div>
             </div>
         </div>
@@ -316,13 +324,51 @@
                     document.getElementById('previewBox').style.display = 'block';
                 };
                 img.onerror = function() {
-                    uploadedPhotoBase64 = e.target.result;
-                    document.getElementById('photoPreview').src = uploadedPhotoBase64;
-                    document.getElementById('previewBox').style.display = 'block';
+                    removePhoto();
+                    showResendFormStatus('error', currentLang === 'en'
+                        ? 'Unsupported image format (such as HEIC). Please upload a JPG, PNG, or WebP image.'
+                        : 'Format foto tidak didukung (seperti HEIC). Mohon gunakan foto berformat JPG, PNG, atau WebP.');
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        const formOpenedAt = Date.now();
+        let activeRequestId = '';
+
+        function getOrCreateRequestId() {
+            if (!activeRequestId) {
+                try {
+                    activeRequestId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                        ? crypto.randomUUID()
+                        : ('req_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10));
+                } catch (e) {
+                    activeRequestId = 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+                }
+            }
+            return activeRequestId;
+        }
+
+        function showResendFormStatus(type, msg) {
+            const box = document.getElementById('resendStatusMsg');
+            if (!box) return;
+            if (!msg) { box.style.display = 'none'; box.textContent = ''; return; }
+            if (type === 'success') {
+                box.style.background = '#f0fdf4';
+                box.style.border = '1px solid #bbf7d0';
+                box.style.color = '#166534';
+            } else if (type === 'info') {
+                box.style.background = '#fefce8';
+                box.style.border = '1px solid #fde047';
+                box.style.color = '#854d0e';
+            } else {
+                box.style.background = '#fef2f2';
+                box.style.border = '1px solid #fecaca';
+                box.style.color = '#991b1b';
+            }
+            box.textContent = msg;
+            box.style.display = 'block';
         }
 
         function removePhoto() {
@@ -335,25 +381,46 @@
 
         async function submitResend(event) {
             event.preventDefault();
+            showResendFormStatus('', '');
+
+            // Proteksi honeypot & minimal 3 detik sejak halaman dibuka
+            const hpVal = (document.getElementById('resWebsite') && document.getElementById('resWebsite').value || '').trim();
+            if (hpVal !== '') {
+                showResendFormStatus('success', '✅ Permintaan Anda telah diterima.');
+                return;
+            }
+            const elapsedMs = Date.now() - formOpenedAt;
+            if (elapsedMs < 3000) {
+                showResendFormStatus('error', currentLang === 'en'
+                    ? 'Please double-check your details before submitting.'
+                    : 'Mohon periksa kembali data Anda sejenak sebelum mengirim.');
+                return;
+            }
+
             try {
                 const lastSent = Number(sessionStorage.getItem('ohsnap_last_resend_ts') || 0);
                 if (Date.now() - lastSent < 30000) {
                     const sisa = Math.ceil((30000 - (Date.now() - lastSent)) / 1000);
-                    alert('⏳ Mohon tunggu ' + sisa + ' detik sebelum mengirim permintaan lagi.');
+                    showResendFormStatus('info', '⏳ Mohon tunggu ' + sisa + ' detik sebelum mengirim permintaan lagi.');
                     return;
                 }
             } catch (e) {}
 
-            if (!uploadedPhotoBase64) {
-                alert('⚠️ Mohon pilih dan unggah foto bukti sesi terlebih dahulu.');
+            if (!uploadedPhotoBase64 || !/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(uploadedPhotoBase64)) {
+                showResendFormStatus('error', currentLang === 'en'
+                    ? '⚠️ Please select a valid JPG, PNG, or WebP proof photo first.'
+                    : '⚠️ Mohon pilih dan unggah foto bukti sesi berformat JPG, PNG, atau WebP terlebih dahulu.');
                 return;
             }
 
             const btn = document.getElementById('submitBtn');
-            btn.textContent = '⏳ Mengirim Data...';
+            btn.textContent = currentLang === 'en' ? '⏳ Submitting...' : '⏳ Mengirim Data...';
             btn.disabled = true;
 
             const payload = {
+                request_id: getOrCreateRequestId(),
+                _elapsedMs: elapsedMs,
+                website: hpVal,
                 nama: document.getElementById('resName').value.trim(),
                 email: document.getElementById('resEmail').value.trim(),
                 whatsapp: document.getElementById('resWa').value.trim(),
@@ -366,21 +433,30 @@
             };
 
             try {
-                // Kirim lewat helper bersama (validasi URL, timeout 60 dtk karena ada upload foto, parse aman)
                 const result = await OhSnapCloud.sheetFetch('POST', payload, 60000);
-                // Hanya anggap berhasil jika server benar-benar membalas status "success"
                 if (!result || result.status !== 'success') {
-                    throw new Error((result && result.message) || 'Server menolak permintaan.');
+                    const userFriendlyErr = (result && result.message && !/HTTP|Apps Script|Deploy|JSON/i.test(result.message))
+                        ? result.message
+                        : (currentLang === 'en' ? 'Server is busy, please try again in 1 minute.' : 'Server sedang sibuk, silakan coba 1 menit lagi.');
+                    throw new Error(userFriendlyErr);
                 }
 
                 try { sessionStorage.setItem('ohsnap_last_resend_ts', String(Date.now())); } catch (e) {}
-                alert('✅ Permintaan resend softcopy berhasil dikirim!\n\nPengiriman softfile akan dilakukan dalam kurun waktu 7x24 jam. Jikalau lebih dari waktu yang sudah ditentukan harap menghubungi admin kami di kolom kontak.');
-                
+                activeRequestId = '';
+                showResendFormStatus('success', currentLang === 'en'
+                    ? '✅ Softcopy resend request submitted! Softcopy will be sent within 7x24 hours. If delayed, please contact our admin via the Contact page.'
+                    : '✅ Permintaan resend softcopy berhasil dikirim! Pengiriman softfile dilakukan dalam 7x24 jam. Jika melebihi waktu tersebut, silakan hubungi admin di halaman Kontak.');
+
                 document.getElementById('resendForm').reset();
                 removePhoto();
             } catch (err) {
-                console.error(err);
-                alert('⚠️ Gagal mengirim permintaan' + (err && err.code === 'BAD_URL' ? ' (layanan belum dikonfigurasi, mohon hubungi admin)' : ' (' + ((err && err.message) || 'Kendala jaringan') + ')') + '. Silakan coba lagi.');
+                console.error('[ResendForm] detail error:', err);
+                const rawMsg = (err && err.message) ? String(err.message) : '';
+                const isTechnical = !rawMsg || /HTTP|Apps Script|CORS|Deploy|JSON|timeout|jaringan/i.test(rawMsg);
+                const friendlyMsg = isTechnical
+                    ? (currentLang === 'en' ? '⚠️ Server is currently busy or connection timed out. Please try again in 1 minute.' : '⚠️ Server sedang sibuk atau koneksi lambat. Silakan coba kirim ulang dalam 1 menit.')
+                    : ('⚠️ ' + rawMsg);
+                showResendFormStatus('error', friendlyMsg);
             } finally {
                 btn.textContent = currentLang === 'en' ? 'Submit Request' : 'Kirim Permintaan';
                 btn.disabled = false;
@@ -454,17 +530,24 @@
                 let destQuery = known ? known.destQuery : ('Oh Snap Photobox ' + nm);
 
                 const mUrl = String(b.mapUrl || '').trim();
-                const coordMatch = mUrl.match(/(?:@|q=)(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-                if (coordMatch) {
+                const adminLat = parseFloat(b.lat);
+                const adminLng = parseFloat(b.lng);
+                if (!isNaN(adminLat) && !isNaN(adminLng)) {
+                    lat = adminLat;
+                    lng = adminLng;
+                }
+                const coordMatch = mUrl.match(/(?:@|q=|ll=|!3d)(-?\d+\.\d+)(?:,|!4d)\s*(-?\d+\.\d+)/);
+                if (coordMatch && (isNaN(adminLat) || isNaN(adminLng))) {
                     lat = parseFloat(coordMatch[1]);
                     lng = parseFloat(coordMatch[2]);
                 }
                 const pidMatch = mUrl.match(/query_place_id=([A-Za-z0-9_-]+)/);
                 if (pidMatch) placeId = pidMatch[1];
 
-                const cleanMapUrl = known
+                const safeCustomMapUrl = (mUrl && mUrl !== '#') ? OhSnapCloud.safeUrl(mUrl, '') : '';
+                const cleanMapUrl = safeCustomMapUrl || (known
                     ? (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(known.destQuery) + (known.placeId ? '&query_place_id=' + encodeURIComponent(known.placeId) : ''))
-                    : OhSnapCloud.safeUrl(mUrl, GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery));
+                    : (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery)));
 
                 return {
                     title: known ? known.name : ('OH SNAP! ' + nm + fl),
@@ -566,7 +649,8 @@
 
                 let mapTargetUrl = '';
                 if (/Android/i.test(navigator.userAgent)) {
-                    mapTargetUrl = 'geo:' + (nearest.lat || -7.8166) + ',' + (nearest.lng || 112.0163) + '?q=' + encodeURIComponent(nearest.destQuery);
+                    const hasCoords = typeof nearest.lat === 'number' && typeof nearest.lng === 'number';
+                    mapTargetUrl = 'geo:' + (hasCoords ? (nearest.lat + ',' + nearest.lng) : '0,0') + '?q=' + encodeURIComponent(nearest.destQuery);
                 } else {
                     mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery);
                 }
@@ -612,12 +696,17 @@
                     const cachedRes = findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng);
                     if (cachedRes && cachedRes.branch) updateFooterMapPreview(cachedRes.branch, cachedRes.distanceKm);
                 }
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(pos) {
-                        saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
-                        const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
-                        if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
-                    }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                // Jangan tampilkan pop-up izin GPS otomatis saat baru buka web (hanya baca jika izin sudah 'granted')
+                if (navigator.geolocation && navigator.permissions && navigator.permissions.query) {
+                    navigator.permissions.query({ name: 'geolocation' }).then(function(perm) {
+                        if (perm && perm.state === 'granted') {
+                            navigator.geolocation.getCurrentPosition(function(pos) {
+                                saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
+                                const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
+                                if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
+                            }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
+                        }
+                    }).catch(function() {});
                 }
             } catch (e) {}
         })();
