@@ -51,11 +51,16 @@
       let res;
       if (method === 'GET') {
         const qs = new URLSearchParams(Object.assign({ t: String(Date.now()) }, payloadOrParams || {})).toString();
-        res = await fetch(SHEET_SCRIPT_URL + '?' + qs, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+        res = await fetch(SHEET_SCRIPT_URL + '?' + qs, {
+          cache: 'no-store',
+          credentials: 'omit',
+          signal: ctrl ? ctrl.signal : undefined
+        });
       } else {
         // text/plain = "simple request" -> tidak memicu preflight CORS yang tidak didukung Apps Script
         res = await fetch(SHEET_SCRIPT_URL, {
           method: 'POST',
+          credentials: 'omit',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payloadOrParams || {}),
           signal: ctrl ? ctrl.signal : undefined
