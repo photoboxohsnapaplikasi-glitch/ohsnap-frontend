@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resend Softcopy - OH SNAP! Photobox</title>
     <meta name="description" content="Permintaan Resend Softcopy Foto OH SNAP! Photobox.">
+    <link rel="canonical" href="https://ohsnap.web.id/resend">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="OH SNAP! Photobox">
+    <meta property="og:title" content="Resend Softcopy - OH SNAP! Photobox">
+    <meta property="og:description" content="Ajukan pengiriman ulang file softcopy foto sesi OH SNAP! Photobox Anda secara online.">
+    <meta property="og:url" content="https://ohsnap.web.id/resend">
+    <meta property="og:image" content="https://ohsnap.web.id/images/icon-512x512.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Resend Softcopy - OH SNAP! Photobox">
+    <meta name="twitter:description" content="Ajukan pengiriman ulang file softcopy foto sesi OH SNAP! Photobox Anda secara online.">
+    <meta name="twitter:image" content="https://ohsnap.web.id/images/icon-512x512.png">
+    <script type="application/ld+json">{"@context": "https://schema.org", "@type": "LocalBusiness", "name": "OH SNAP! Photobox", "url": "https://ohsnap.web.id/", "logo": "https://ohsnap.web.id/images/icon-512x512.png", "image": "https://ohsnap.web.id/images/icon-512x512.png", "description": "Photobox & Self-Photo Studio kekinian dengan bilik tematik dan hasil cetak instan di berbagai pusat perbelanjaan Indonesia.", "sameAs": ["https://www.instagram.com/ohsnap_photobox", "https://www.tiktok.com/@ohsnap_photobox"]}</script>
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
     <link rel="icon" type="image/jpeg" href="images/logo-icon.jpg">
     <link rel="preconnect" href="https://kbkayevpbeijuuufnrgt.supabase.co" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,6 +134,10 @@
             .footer-content { grid-template-columns: 1fr; gap: 30px; }
             .footer-bottom { flex-direction: column; text-align: center; justify-content: center; }
         }
+        :focus-visible { outline: 3px solid var(--primary, #ff1493); outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+        }
     </style>
 </head>
 <body>
@@ -197,6 +215,7 @@
                     </div>
                 </div>
 
+                <div id="turnstileContainer" style="display:none; margin-bottom:14px; justify-content:center;"></div>
                 <div id="resendStatusMsg" role="status" aria-live="polite" style="display:none; margin-bottom:14px; padding:12px 14px; border-radius:12px; font-size:0.88rem; font-weight:600; line-height:1.5;"></div>
                 <button type="submit" id="submitBtn" class="btn-submit" data-en="Submit Request" data-id="Kirim Permintaan">Kirim Permintaan</button>
             </form>
@@ -233,7 +252,7 @@
             <div class="footer-map-col">
                 <h4 id="fCardTitle" class="footer-map-heading" data-en="Find nearby OH SNAP! Studio:" data-id="Temukan Studio OH SNAP! Terdekat:">Temukan Studio OH SNAP! Terdekat:</h4>
                 <p id="fCardDesc" style="display:none;"></p>
-                <div class="footer-map-box" onclick="openNearestOhSnapGps(event)" role="button" tabindex="0" aria-label="Buka Google Maps Cabang OH SNAP! Terdekat via GPS">
+                <div class="footer-map-box" onclick="openNearestOhSnapGps(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openNearestOhSnapGps(event);}" role="button" tabindex="0" aria-label="Buka Google Maps Cabang OH SNAP! Terdekat via GPS">
                     <div class="footer-map-overlay-card">
                         <div class="map-card-title" id="footerNearestTitle">OH SNAP! Photobox</div>
                         <div class="map-card-sub" id="footerNearestSub" data-en="Click to route to nearest branch via GPS" data-id="Klik untuk rute cabang terdekat via GPS">Klik untuk rute cabang terdekat via GPS</div>
@@ -267,6 +286,7 @@
     </footer>
 
     <script src="cms-cloud.js"></script>
+    <script src="shared.js"></script>
     <script>
         // URL Apps Script diatur terpusat di cms-cloud.js (SHEET_SCRIPT_URL)
 
@@ -275,26 +295,6 @@
         let cms = null;
         try { cms = JSON.parse(localStorage.getItem('ohsnap_cms_data')); } catch (e) {}
         let lastRenderedSignature = '';
-
-        function escHtml(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-
-        (function() {
-            const btn = document.getElementById('menuToggle');
-            const nav = document.getElementById('navContainer');
-            if (!btn || !nav) return;
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                nav.classList.toggle('active');
-            });
-            document.addEventListener('click', (e) => {
-                if (nav.classList.contains('active') && !nav.contains(e.target) && !btn.contains(e.target)) {
-                    nav.classList.remove('active');
-                }
-            });
-        })();
 
         let uploadedPhotoBase64 = '';
         let uploadedPhotoName = '';
@@ -332,6 +332,62 @@
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        // Opsional Cloudflare Turnstile: isi Site Key di sini HANYA jika TURNSTILE_SECRET_KEY diaktifkan di Apps Script Properties
+        const TURNSTILE_SITE_KEY = '';
+        let turnstileWidgetId = null;
+        let turnstileLoaded = false;
+
+        function getActiveTurnstileSiteKey() {
+            const fromCms = (cms && typeof cms.turnstileSiteKey === 'string') ? cms.turnstileSiteKey.trim() : '';
+            return TURNSTILE_SITE_KEY.trim() || fromCms;
+        }
+
+        function initTurnstileWidget() {
+            const siteKey = getActiveTurnstileSiteKey();
+            const container = document.getElementById('turnstileContainer');
+            if (!siteKey || !container || turnstileLoaded) return;
+            turnstileLoaded = true;
+            container.style.display = 'flex';
+
+            function renderWidget() {
+                if (window.turnstile && turnstileWidgetId === null) {
+                    turnstileWidgetId = window.turnstile.render('#turnstileContainer', {
+                        sitekey: siteKey,
+                        theme: 'light'
+                    });
+                }
+            }
+
+            if (window.turnstile) {
+                renderWidget();
+            } else {
+                const s = document.createElement('script');
+                s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+                s.async = true;
+                s.defer = true;
+                s.onload = renderWidget;
+                document.head.appendChild(s);
+            }
+        }
+
+        function getTurnstileToken() {
+            try {
+                if (window.turnstile && turnstileWidgetId !== null) {
+                    return window.turnstile.getResponse(turnstileWidgetId) || '';
+                }
+            } catch (e) {}
+            const inp = document.querySelector('input[name="cf-turnstile-response"]');
+            return inp ? String(inp.value || '').trim() : '';
+        }
+
+        function resetTurnstileWidget() {
+            try {
+                if (window.turnstile && turnstileWidgetId !== null) {
+                    window.turnstile.reset(turnstileWidgetId);
+                }
+            } catch (e) {}
         }
 
         const formOpenedAt = Date.now();
@@ -413,6 +469,15 @@
                 return;
             }
 
+            const activeTsKey = getActiveTurnstileSiteKey();
+            const tsToken = getTurnstileToken();
+            if (activeTsKey && !tsToken) {
+                showResendFormStatus('error', currentLang === 'en'
+                    ? '⚠️ Please complete the security verification (Cloudflare Turnstile) first.'
+                    : '⚠️ Mohon selesaikan verifikasi keamanan terlebih dahulu.');
+                return;
+            }
+
             const btn = document.getElementById('submitBtn');
             btn.textContent = currentLang === 'en' ? '⏳ Submitting...' : '⏳ Mengirim Data...';
             btn.disabled = true;
@@ -421,6 +486,7 @@
                 request_id: getOrCreateRequestId(),
                 _elapsedMs: elapsedMs,
                 website: hpVal,
+                turnstileToken: tsToken,
                 nama: document.getElementById('resName').value.trim(),
                 email: document.getElementById('resEmail').value.trim(),
                 whatsapp: document.getElementById('resWa').value.trim(),
@@ -458,258 +524,12 @@
                     : ('⚠️ ' + rawMsg);
                 showResendFormStatus('error', friendlyMsg);
             } finally {
+                resetTurnstileWidget();
                 btn.textContent = currentLang === 'en' ? 'Submit Request' : 'Kirim Permintaan';
                 btn.disabled = false;
             }
         }
 
-
-        // Helper Peta Footer & Rute Cabang OH SNAP! Terdekat via GPS (Instant & Native App Link)
-        const GMAPS_ROOT = 'https://www.google' + '.com/maps';
-        const GMAPS_EMBED_ROOT = 'https://maps.google' + '.com/maps';
-
-        const OHSNAP_BRANCH_COORDS = [
-            {
-                match: 'kediri',
-                name: 'Oh Snap Photobox Kediri (Kediri Mall Lt.5)',
-                lat: -7.8166,
-                lng: 112.0163,
-                placeId: 'ChIJJTp8gHxXeC4R0eMGkmnssvQ',
-                destQuery: 'Oh Snap Photobox Kediri, Kediri Mall Lt.5, Jl. Hayam Wuruk No.46, Kota Kediri'
-            },
-            {
-                match: 'cilacap',
-                name: 'Oh Snap Photobox (Plaza Cilacap Lt.3)',
-                lat: -7.7279,
-                lng: 109.0076,
-                placeId: 'ChIJ71iRM3wTZS4Rrr7EqRI3A84',
-                destQuery: 'Oh Snap Photobox, Plaza Cilacap Lt.3, Jl. RE. Martadinata No.42, Cilacap'
-            },
-            {
-                match: 'laksana',
-                name: 'Oh Snap Photobox Majenang (Laksana Baru Lt.3)',
-                lat: -7.2975,
-                lng: 108.7614,
-                placeId: 'ChIJ_3pPM_1_by4RT_FVbDVw8p4',
-                destQuery: 'Oh Snap Photobox Majenang, Laksana Baru Majenang Lt.3, Jl. Diponegoro No.312, Majenang'
-            },
-            {
-                match: 'pekalongan',
-                name: 'Oh Snap Photobox Pekalongan (Plaza Pekalongan Lt.2)',
-                lat: -6.8898,
-                lng: 109.6746,
-                placeId: 'ChIJ46o-mGMlcC4REovLqtjx-_4',
-                destQuery: 'Oh Snap Photobox Pekalongan, Plaza Pekalongan Lt.2, Jl. Nusantara No.5, Kota Pekalongan'
-            },
-            {
-                match: 'pemalang',
-                name: 'Oh Snap Photobox Pemalang (Yogya Pemalang Lt.3)',
-                lat: -6.8903,
-                lng: 109.3808,
-                placeId: 'ChIJkY0Gm7nbby4RmIpX5D5mdhw',
-                destQuery: 'Oh Snap Photobox Pemalang, Toserba YOGYA Pemalang Lt.3, Jl. Jend. Sudirman No.94, Pemalang'
-            }
-        ];
-
-        function getOhSnapBranchesWithCoords() {
-            const rawList = (cms && Array.isArray(cms.locations) && cms.locations.length > 0) ? cms.locations : [
-                { name: 'Kediri Mall', floor: 'Lantai 5' },
-                { name: 'Plaza Cilacap', floor: 'Lantai 3' },
-                { name: 'Laksana Baru', floor: 'Lantai 3' },
-                { name: 'Plaza Pekalongan', floor: 'Lantai 2' },
-                { name: 'Yogya Pemalang', floor: 'Lantai 3' }
-            ];
-            return rawList.map(b => {
-                const nm = String(b.name || 'Cabang').trim();
-                const fl = b.floor ? ' ' + String(b.floor).replace(/^Lantai\s+/i, 'Lt.') : '';
-                const lower = nm.toLowerCase();
-                const known = OHSNAP_BRANCH_COORDS.find(k => lower.includes(k.match));
-                let lat = known ? known.lat : null;
-                let lng = known ? known.lng : null;
-                let placeId = known ? known.placeId : '';
-                let destQuery = known ? known.destQuery : ('Oh Snap Photobox ' + nm);
-
-                const mUrl = String(b.mapUrl || '').trim();
-                const adminLat = parseFloat(b.lat);
-                const adminLng = parseFloat(b.lng);
-                if (!isNaN(adminLat) && !isNaN(adminLng)) {
-                    lat = adminLat;
-                    lng = adminLng;
-                }
-                const coordMatch = mUrl.match(/(?:@|q=|ll=|!3d)(-?\d+\.\d+)(?:,|!4d)\s*(-?\d+\.\d+)/);
-                if (coordMatch && (isNaN(adminLat) || isNaN(adminLng))) {
-                    lat = parseFloat(coordMatch[1]);
-                    lng = parseFloat(coordMatch[2]);
-                }
-                const pidMatch = mUrl.match(/query_place_id=([A-Za-z0-9_-]+)/);
-                if (pidMatch) placeId = pidMatch[1];
-
-                const safeCustomMapUrl = (mUrl && mUrl !== '#') ? OhSnapCloud.safeUrl(mUrl, '') : '';
-                const cleanMapUrl = safeCustomMapUrl || (known
-                    ? (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(known.destQuery) + (known.placeId ? '&query_place_id=' + encodeURIComponent(known.placeId) : ''))
-                    : (GMAPS_ROOT + '/search/?api=1&query=' + encodeURIComponent(destQuery)));
-
-                return {
-                    title: known ? known.name : ('OH SNAP! ' + nm + fl),
-                    destQuery: destQuery,
-                    placeId: placeId,
-                    mapUrl: cleanMapUrl,
-                    lat: lat,
-                    lng: lng
-                };
-            });
-        }
-
-        function calcHaversineKm(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        }
-
-        function findNearestBranchFromCoords(uLat, uLng) {
-            const branches = getOhSnapBranchesWithCoords();
-            let best = branches[0];
-            let bestDist = Infinity;
-            branches.forEach(b => {
-                if (typeof b.lat === 'number' && typeof b.lng === 'number') {
-                    const d = calcHaversineKm(uLat, uLng, b.lat, b.lng);
-                    if (d < bestDist) {
-                        bestDist = d;
-                        best = b;
-                    }
-                }
-            });
-            return { branch: best, distanceKm: bestDist };
-        }
-
-        function updateFooterMapPreview(nearest, distanceKm) {
-            if (!nearest) return;
-            const isEn = currentLang === 'en';
-            const distStr = isFinite(distanceKm) ? (' • ' + distanceKm.toFixed(1) + ' km') : '';
-            const titleEl = document.getElementById('footerNearestTitle');
-            const subEl = document.getElementById('footerNearestSub');
-            const iframeEl = document.getElementById('footerMapIframe');
-            if (titleEl) titleEl.textContent = nearest.title;
-            if (subEl && isFinite(distanceKm)) {
-                subEl.textContent = (isEn ? 'Nearest branch' : 'Cabang terdekat') + distStr;
-            }
-            if (iframeEl) {
-                const embedUrl = GMAPS_EMBED_ROOT + '?q=' + encodeURIComponent(nearest.destQuery) + '&t=&z=16&ie=UTF8&iwloc=&output=embed';
-                if (iframeEl.getAttribute('src') !== embedUrl) iframeEl.src = embedUrl;
-            }
-        }
-
-        // Cache koordinat GPS agar perpindahan halaman & klik di Desktop 0ms (instan tanpa jeda)
-        let cachedUserCoords = null;
-        try {
-            const savedCoords = sessionStorage.getItem('ohsnap_gps_coords');
-            if (savedCoords) cachedUserCoords = JSON.parse(savedCoords);
-        } catch (e) {}
-
-        function saveUserCoordsCache(lat, lng) {
-            if (typeof lat === 'number' && typeof lng === 'number') {
-                cachedUserCoords = { lat: lat, lng: lng };
-                try { sessionStorage.setItem('ohsnap_gps_coords', JSON.stringify(cachedUserCoords)); } catch (e) {}
-            }
-        }
-
-        function openNearestOhSnapGps(event) {
-            if (event) event.preventDefault();
-            const branches = getOhSnapBranchesWithCoords();
-            const defaultBranch = branches[0] || OHSNAP_BRANCH_COORDS[0];
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-            // DESKTOP: Buka Google Maps Rute secara INSTAN (0ms) tanpa menunggu loading GPS browser
-            if (!isMobile) {
-                const res = cachedUserCoords
-                    ? findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng)
-                    : { branch: defaultBranch, distanceKm: Infinity };
-                const nearest = res.branch || defaultBranch;
-                const desktopDirUrl = GMAPS_ROOT + '/dir/?api=1&destination=' + encodeURIComponent(nearest.destQuery) + (nearest.placeId ? '&destination_place_id=' + encodeURIComponent(nearest.placeId) : '') + '&travelmode=driving';
-                window.open(desktopDirUrl, '_blank', 'noopener,noreferrer');
-                return;
-            }
-
-            // MOBILE (HP): Langsung buka aplikasi native Google Maps / Apple Maps
-            const isEn = currentLang === 'en';
-            const subEl = document.getElementById('footerNearestSub');
-            if (subEl) subEl.textContent = isEn ? '⏳ Opening Maps app...' : '⏳ Membuka aplikasi Maps...';
-
-            function navigateMobile(uLat, uLng) {
-                if (typeof uLat === 'number' && typeof uLng === 'number') saveUserCoordsCache(uLat, uLng);
-                const res = (typeof uLat === 'number' && typeof uLng === 'number')
-                    ? findNearestBranchFromCoords(uLat, uLng)
-                    : (cachedUserCoords ? findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng) : { branch: defaultBranch, distanceKm: Infinity });
-                const nearest = res.branch || defaultBranch;
-                updateFooterMapPreview(nearest, res.distanceKm);
-
-                let mapTargetUrl = '';
-                if (/Android/i.test(navigator.userAgent)) {
-                    const hasCoords = typeof nearest.lat === 'number' && typeof nearest.lng === 'number';
-                    mapTargetUrl = 'geo:' + (hasCoords ? (nearest.lat + ',' + nearest.lng) : '0,0') + '?q=' + encodeURIComponent(nearest.destQuery);
-                } else {
-                    mapTargetUrl = 'maps://?q=' + encodeURIComponent(nearest.destQuery);
-                }
-                window.location.href = mapTargetUrl;
-            }
-
-            if (cachedUserCoords) {
-                navigateMobile(cachedUserCoords.lat, cachedUserCoords.lng);
-                return;
-            }
-
-            if (!navigator.geolocation) {
-                navigateMobile(null, null);
-                return;
-            }
-
-            let responded = false;
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    if (responded) return;
-                    responded = true;
-                    navigateMobile(pos.coords.latitude, pos.coords.longitude);
-                },
-                function() {
-                    if (responded) return;
-                    responded = true;
-                    navigateMobile(null, null);
-                },
-                { enableHighAccuracy: false, timeout: 1800, maximumAge: 300000 }
-            );
-
-            setTimeout(function() {
-                if (!responded) {
-                    responded = true;
-                    navigateMobile(null, null);
-                }
-            }, 2000);
-        }
-
-        (function autoDetectNearestOnLoad() {
-            try {
-                if (cachedUserCoords) {
-                    const cachedRes = findNearestBranchFromCoords(cachedUserCoords.lat, cachedUserCoords.lng);
-                    if (cachedRes && cachedRes.branch) updateFooterMapPreview(cachedRes.branch, cachedRes.distanceKm);
-                }
-                // Jangan tampilkan pop-up izin GPS otomatis saat baru buka web (hanya baca jika izin sudah 'granted')
-                if (navigator.geolocation && navigator.permissions && navigator.permissions.query) {
-                    navigator.permissions.query({ name: 'geolocation' }).then(function(perm) {
-                        if (perm && perm.state === 'granted') {
-                            navigator.geolocation.getCurrentPosition(function(pos) {
-                                saveUserCoordsCache(pos.coords.latitude, pos.coords.longitude);
-                                const res = findNearestBranchFromCoords(pos.coords.latitude, pos.coords.longitude);
-                                if (res && res.branch) updateFooterMapPreview(res.branch, res.distanceKm);
-                            }, function() {}, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 });
-                        }
-                    }).catch(function() {});
-                }
-            } catch (e) {}
-        })();
 
         function applyCMS() {
             if (!cms) return;
@@ -730,48 +550,14 @@
                     branchSelect.value = currentVal;
                 }
             }
-            if (cms && cms.footer) {
-                document.getElementById('fBrand').textContent = cms.footer.brand;
-                document.getElementById('fBranches').textContent = cms.footer.branches;
-                const safeIgUrl = OhSnapCloud.safeUrl(cms.footer.igUrl, 'https://www.instagram.com/ohsnap_photobox');
-                const safeTtUrl = OhSnapCloud.safeUrl(cms.footer.ttUrl, 'https://www.tiktok.com/@ohsnap_photobox');
-                const ig = document.getElementById('fIg'); if(ig) { ig.textContent = cms.footer.igName; ig.href = safeIgUrl; }
-                const tt = document.getElementById('fTt'); if(tt) { tt.textContent = cms.footer.ttName; tt.href = safeTtUrl; }
-                const igBot = document.getElementById('fIgBottom'); if(igBot) { igBot.href = safeIgUrl; }
-                const ttBot = document.getElementById('fTtBottom'); if(ttBot) { ttBot.href = safeTtUrl; }
-
-                const rawTitleId = (cms.footer.cardTitleId || '').trim();
-                const rawTitleEn = (cms.footer.cardTitleEn || '').trim();
-                const isDefaultEngTitle = !rawTitleId || rawTitleId.toLowerCase() === 'find nearby oh snap! studio';
-                const finalCardTitle = currentLang === 'en'
-                    ? (rawTitleEn || 'Find nearby OH SNAP! Studio:')
-                    : (isDefaultEngTitle ? 'Temukan Studio OH SNAP! Terdekat:' : rawTitleId);
-                const cardTitleEl = document.getElementById('fCardTitle');
-                if (cardTitleEl) cardTitleEl.textContent = finalCardTitle;
-
-                const cardDescEl = document.getElementById('fCardDesc');
-                if (cardDescEl) {
-                    cardDescEl.textContent = currentLang === 'en' ? (cms.footer.cardDescEn || 'Find the nearest booth and studio in your city to capture your special moments today!') : (cms.footer.cardDescId || 'Temukan booth dan studio terdekat di kotamu untuk abadikan momen serumu hari ini!');
-                }
-                document.getElementById('fCopy').textContent = cms.footer.copyright;
-            } else {
-                const cardTitleEl = document.getElementById('fCardTitle');
-                if (cardTitleEl) {
-                    cardTitleEl.textContent = currentLang === 'en' ? 'Find nearby OH SNAP! Studio:' : 'Temukan Studio OH SNAP! Terdekat:';
-                }
-            }
-            const firstBranches = getOhSnapBranchesWithCoords();
-            if (firstBranches && firstBranches[0]) {
-                const nTitle = document.getElementById('footerNearestTitle');
-                if (nTitle && nTitle.textContent === 'OH SNAP! Photobox') {
-                    nTitle.textContent = firstBranches[0].title;
-                }
-            }
+            applyOhSnapFooter(cms, currentLang);
+            initTurnstileWidget();
             try { lastRenderedSignature = JSON.stringify(cms) + '_' + currentLang; } catch (e) {}
         }
 
         function setLanguage(lang) {
             currentLang = lang;
+            document.documentElement.lang = lang;
             try { localStorage.setItem('siteLang', lang); } catch (e) {}
             document.getElementById('btnEN').classList.toggle('active', lang === 'en');
             document.getElementById('btnID').classList.toggle('active', lang === 'id');

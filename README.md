@@ -1,87 +1,49 @@
-# 📸 OH SNAP! Photobox — Website
+# 📸 OH SNAP! Photobox — Website Utama
 
-Website resmi **OH SNAP! Photobox**, Photobox & Self-Photo Studio kekinian: langsung cetak dan bawa pulang.
+Website resmi **OH SNAP! Photobox** ([ohsnap.web.id](https://ohsnap.web.id)) yang menampilkan layanan, koleksi frame, lokasi cabang terdekat via GPS, cerita brand, kontak, dan formulir permintaan *Resend Softcopy*.
 
-🌐 **Website:** [ohsnap.web.id](https://ohsnap.web.id)
+> Repo ini berisi website publik untuk pengunjung. Dashboard pengelola konten berada di repo terpisah: **ohsnap-admin**.
 
 ---
 
-## ✨ Fitur
+## ✨ Fitur Utama
 
-- **Dua bahasa** — Indonesia dan Inggris, bisa diganti langsung lewat tombol **EN / ID** di menu.
-- **Responsif** — tampilan menyesuaikan HP, tablet, dan laptop.
-- **Konten bisa diubah tanpa menyentuh kode** — teks, foto, video, promo, lokasi, dan warna dikelola lewat dashboard admin terpisah. Perubahan langsung tampil di semua perangkat.
-- **Resend Softcopy** — pelanggan bisa meminta kirim ulang hasil foto lewat formulir.
-- **Tetap bisa dibuka saat koneksi lemah** — halaman memakai salinan konten terakhir bila server konten tidak terjangkau.
-- **Alamat URL bersih** — tanpa `.html` di belakangnya (contoh: `ohsnap.web.id/layanan`).
-
-## 📄 Halaman
-
-| Halaman | Alamat | File |
-|---|---|---|
-| Beranda | `/` | `index.html` |
-| Our Story | `/story` | `story.html` |
-| Layanan & Paket | `/layanan` | `layanan.html` |
-| Frame | `/frame` | `frame.html` |
-| Lokasi | `/lokasi` | `lokasi.html` |
-| Resend Softcopy | `/resend` | `resend.html` |
-| Kontak | `/kontak` | `kontak.html` |
-
-## 🧱 Teknologi
-
-- **HTML, CSS, dan JavaScript** biasa, tanpa framework dan tanpa proses build
-- **Supabase** — penyimpanan konten dan media (CMS berbasis cloud)
-- **Google Apps Script** — pemrosesan formulir Resend Softcopy
-- **GitHub Pages** + domain khusus (custom domain) — hosting
+- **Sinkronisasi Live dari Cloud:** Konten teks, gambar, video, promo, dan warna tema ditarik dari Supabase dan diperbarui secara otomatis via pengecekan delta ringan `updated_at` (~40 byte) saat tab aktif tanpa membuka koneksi WebSocket (menghemat batas 200 koneksi Supabase Free).
+- **Cadangan Offline (`content-snapshot.json`):** Jika browser pengunjung baru pertama kali membuka website saat Supabase sedang tidak dapat dijangkau, snapshot statis otomatis digunakan sebagai fallback.
+- **Arsitektur Bersih (`shared.js`):** Navigasi mobile, peta footer, perhitungan cabang terdekat via GPS, fallback footer, dan aksesibilitas keyboard dipusatkan di `shared.js`.
+- **Formulir Resend Softcopy Aman:** Dilengkapi *honeypot*, batas waktu kirim minimal 3 detik, `request_id` UUID anti-duplikat, validasi format foto (menolak HEIC), serta pesan status ramah langsung di halaman.
+- **Performa, SEO & Aksesibilitas:** Peta footer & gambar galeri memakai `loading="lazy"`, GPS tidak memunculkan pop-up izin otomatis sebelum interaksi, lengkap dengan meta Open Graph, `canonical`, JSON-LD `LocalBusiness`, favicon 32/180/512 px, dukungan keyboard (`Enter`/`Space`), `:focus-visible`, dan `prefers-reduced-motion`.
 
 ## 🗂️ Struktur Folder
 
 ```
 .
-├── index.html        # Beranda
-├── story.html        # Our Story
-├── layanan.html      # Layanan & paket
-├── frame.html        # Koleksi frame
-├── lokasi.html       # Lokasi cabang
-├── resend.html       # Formulir Resend Softcopy
-├── kontak.html       # Kontak
-├── cms-cloud.js      # Penghubung ke cloud (membaca konten & media)
-├── images/           # Aset gambar bawaan (logo, dll.)
-└── CNAME             # Pengaturan domain khusus untuk GitHub Pages
+├── index.html                           # Beranda (Hero, About, Promo, Studio, Video Feed)
+├── layanan.html                         # Daftar layanan & harga
+├── frame.html                           # Koleksi frame layout
+├── lokasi.html                          # Daftar lokasi cabang & Google Maps
+├── story.html                           # Cerita lengkap brand
+├── kontak.html                          # Kontak & media sosial (sinkron dengan Footer)
+├── resend.html                          # Formulir permintaan Resend Softcopy
+├── shared.js                            # Modul bersama (navigasi, GPS/peta, footer, a11y)
+├── cms-cloud.js                         # Klien Supabase & Apps Script (harus identik dengan admin)
+├── content-snapshot.json                # Fallback konten statis saat offline
+├── vercel.json                          # Konfigurasi cleanUrls & header keamanan
+├── images/                              # Logo & favicon (32px, 180px, 512px)
+├── .github/workflows/check-cms-cloud-sync.yml  # Cek kesamaan cms-cloud.js antar repo
+└── CNAME                                # Referensi domain utama
 ```
 
-## 🔄 Cara Kerja Konten
+## 🚀 Deploy (Vercel)
 
-```
-Dashboard Admin  ──simpan──▶  Cloud (Supabase)  ──baca──▶  Website ini
-```
-
-Website ini hanya **membaca** konten dari cloud. Isinya dikelola lewat repo dan dashboard admin yang terpisah. Setiap halaman mengambil konten terbaru saat dibuka dan saat tab kembali aktif. Jika cloud tidak terjangkau, halaman memakai salinan konten terakhir yang tersimpan di browser.
-
-## 💻 Menjalankan di Komputer Sendiri
-
-Karena website ini statis, tidak ada yang perlu di-install.
-
-1. Unduh atau clone repo ini.
-2. Jalankan lewat server lokal, misalnya ekstensi **Live Server** di VS Code, atau:
-   ```bash
-   npx serve
-   ```
-3. Buka alamat yang ditampilkan (biasanya `http://localhost:3000`).
-
-> Sebagian server lokal tidak mengenali alamat tanpa `.html`. Di GitHub Pages hal ini berjalan normal.
-
-## 🚀 Deploy
-
-Setiap perubahan yang di-push ke branch `main` otomatis tayang lewat GitHub Pages dalam 1–2 menit.
+Setiap `git push origin main` otomatis men-deploy versi terbaru di **Vercel** (`https://ohsnap.web.id`) dalam 30–60 detik:
 
 ```bash
+cd ohsnapfrontend
 git add .
 git commit -m "Deskripsi perubahan"
 git push origin main
 ```
-
-> ⚠️ Jangan hapus file **`CNAME`**. File ini menjaga domain `ohsnap.web.id` tetap tersambung ke website.
 
 ---
 

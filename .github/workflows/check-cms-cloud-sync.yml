@@ -1,0 +1,33 @@
+name: Cek Sinkronisasi cms-cloud.js
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'cms-cloud.js'
+  workflow_dispatch:
+
+jobs:
+  verify-cms-cloud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository ini
+        uses: actions/checkout@v4
+
+      - name: Bandingkan checksum cms-cloud.js dengan repo pasangan
+        run: |
+          LOCAL_HASH=$(sha256sum cms-cloud.js | awk '{print $1}')
+          echo "SHA256 lokal cms-cloud.js: $LOCAL_HASH"
+          if [ "${{ github.event.repository.name }}" = "ohsnap-admin" ]; then
+            PAIR_URL="https://raw.githubusercontent.com/${{ github.repository_owner }}/ohsnap-frontend/main/cms-cloud.js"
+          else
+            PAIR_URL="https://raw.githubusercontent.com/${{ github.repository_owner }}/ohsnap-admin/main/cms-cloud.js"
+          fi
+          curl -sfL "$PAIR_URL" -o /tmp/pair-cms-cloud.js || { echo "Repo pasangan belum bisa diakses publik, melewati perbandingan."; exit 0; }
+          PAIR_HASH=$(sha256sum /tmp/pair-cms-cloud.js | awk '{print $1}')
+          echo "SHA256 pasangan cms-cloud.js: $PAIR_HASH"
+          if [ "$LOCAL_HASH" != "$PAIR_HASH" ]; then
+            echo "::warning::cms-cloud.js berbeda dengan repo pasangan! Pastikan kedua repo memakai versi cms-cloud.js yang sama."
+            exit 1
+          fi
+          echo "cms-cloud.js identik di kedua repository."

@@ -162,10 +162,6 @@
     try { return sessionStorage.getItem('ohsnap_admin_token') || ''; } catch (e) { return ''; }
   }
 
-  function getKnownCloudTime() {
-    return lastKnownCloudTime;
-  }
-
   function setKnownCloudTime(t) {
     const n = Number(t || 0);
     if (n > lastKnownCloudTime) lastKnownCloudTime = n;
@@ -190,6 +186,104 @@
     try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
   }
 
+  function isUidObjectArray(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) return false;
+    return arr.every(item => isPlainObject(item) && typeof item._uid === 'string' && item._uid.trim() !== '');
+  }
+
+  // 3-Way Merge array berbasis _uid: aman untuk tambah bersamaan, hapus, edit field, dan ubah urutan tanpa duplikasi
+  function mergeUidArray(baseArr, remoteArr, localArr, preferLocalOnBothChanged) {
+    const baseMap = new Map();
+    const remoteMap = new Map();
+    const localMap = new Map();
+
+    baseArr.forEach(item => { if (isPlainObject(item) && item._uid) baseMap.set(item._uid, item); });
+    remoteArr.forEach(item => { if (isPlainObject(item) && item._uid) remoteMap.set(item._uid, item); });
+    localArr.forEach(item => { if (isPlainObject(item) && item._uid) localMap.set(item._uid, item); });
+
+    const mergedMap = new Map();
+    const allUids = new Set([...baseMap.keys(), ...remoteMap.keys(), ...localMap.keys()]);
+
+    allUids.forEach(uid => {
+      const inB = baseMap.has(uid);
+      const inR = remoteMap.has(uid);
+      const inL = localMap.has(uid);
+      const bItem = baseMap.get(uid);
+      const rItem = remoteMap.get(uid);
+      const lItem = localMap.get(uid);
+
+      if (inB) {
+        if (inR && inL) {
+          mergedMap.set(uid, deepMergeCMS(bItem, rItem, lItem, preferLocalOnBothChanged));
+        } else if (inR && !inL) {
+          // Dihapus secara lokal: tetap dihapus jika remote tidak mengubahnya; pertahankan jika remote mengeditnya
+          if (!isEqualJson(rItem, bItem)) {
+            mergedMap.set(uid, deepClone(rItem));
+          }
+        } else if (!inR && inL) {
+          // Dihapus secara remote: tetap dihapus jika lokal tidak mengubahnya; pertahankan jika lokal mengeditnya
+          if (!isEqualJson(lItem, bItem)) {
+            mergedMap.set(uid, deepClone(lItem));
+          }
+        }
+        // Jika dihapus di kedua perangkat -> tidak dimasukkan ke mergedMap
+      } else {
+        // Item baru yang tidak ada di base
+        if (inR && inL) {
+          mergedMap.set(uid, deepMergeCMS(undefined, rItem, lItem, preferLocalOnBothChanged));
+        } else if (inR) {
+          mergedMap.set(uid, deepClone(rItem));
+        } else if (inL) {
+          mergedMap.set(uid, deepClone(lItem));
+        }
+      }
+    });
+
+    // Tentukan urutan akhir berdasarkan sisi mana yang mengubah urutan relatif item dari base
+    const baseSurviving = baseArr.filter(x => x && x._uid && mergedMap.has(x._uid)).map(x => x._uid);
+    const remoteSurvivingBase = remoteArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
+    const localSurvivingBase = localArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
+
+    const remoteReordered = !isEqualJson(remoteSurvivingBase, baseSurviving);
+    const localReordered = !isEqualJson(localSurvivingBase, baseSurviving);
+
+    let primaryArr, secondaryArr;
+    if (localReordered && !remoteReordered) {
+      primaryArr = localArr;
+      secondaryArr = remoteArr;
+    } else if (remoteReordered && !localReordered) {
+      primaryArr = remoteArr;
+      secondaryArr = localArr;
+    } else {
+      primaryArr = preferLocalOnBothChanged ? localArr : remoteArr;
+      secondaryArr = preferLocalOnBothChanged ? remoteArr : localArr;
+    }
+
+    const result = [];
+    const seen = new Set();
+
+    primaryArr.forEach(item => {
+      if (item && item._uid && mergedMap.has(item._uid) && !seen.has(item._uid)) {
+        seen.add(item._uid);
+        result.push(mergedMap.get(item._uid));
+      }
+    });
+    secondaryArr.forEach(item => {
+      if (item && item._uid && mergedMap.has(item._uid) && !seen.has(item._uid)) {
+        seen.add(item._uid);
+        result.push(mergedMap.get(item._uid));
+      }
+    });
+    mergedMap.forEach((val, uid) => {
+      if (!seen.has(uid)) {
+        seen.add(uid);
+        result.push(val);
+      }
+    });
+
+    return result;
+  }
+
   // 3-Way Field-Level Merge: menggabungkan editan bersamaan dari beberapa device tanpa saling menimpa
   function deepMergeCMS(base, remote, local, preferLocalOnBothChanged) {
     if (isEqualJson(remote, local)) return deepClone(remote);
@@ -205,20 +299,12 @@
 
     if (Array.isArray(remote) && Array.isArray(local)) {
       const baseArr = Array.isArray(base) ? base : [];
-      const minLen = Math.min(remote.length, local.length);
-      const mergedArr = [];
-      for (let i = 0; i < minLen; i++) {
-        mergedArr.push(deepMergeCMS(baseArr[i], remote[i], local[i], preferLocalOnBothChanged));
+      const hasUids = isUidObjectArray(remote) && isUidObjectArray(local) && (baseArr.length === 0 || isUidObjectArray(baseArr));
+      if (hasUids) {
+        return mergeUidArray(baseArr, remote, local, preferLocalOnBothChanged);
       }
-      if (local.length > minLen && remote.length <= baseArr.length) {
-        for (let i = minLen; i < local.length; i++) mergedArr.push(deepClone(local[i]));
-      } else if (remote.length > minLen && local.length <= baseArr.length) {
-        for (let i = minLen; i < remote.length; i++) mergedArr.push(deepClone(remote[i]));
-      } else if (local.length > minLen && remote.length > minLen) {
-        for (let i = minLen; i < remote.length; i++) mergedArr.push(deepClone(remote[i]));
-        for (let i = minLen; i < local.length; i++) mergedArr.push(deepClone(local[i]));
-      }
-      return mergedArr;
+      // Fallback untuk array primitif/legacy tanpa _uid: pilih sisi sesuai preferensi agar tidak menduplikasi elemen
+      return deepClone(preferLocalOnBothChanged ? local : remote);
     }
 
     if (isPlainObject(remote) && isPlainObject(local)) {
@@ -335,8 +421,9 @@
         localSyncedAt = Number(localStorage.getItem('ohsnap_cloud_synced_at') || 0);
       } catch (e) {}
 
-      // Jika baru dicek < 1500ms lalu dan data lokal sudah ada, kembalikan langsung tanpa duplikasi request
-      if (!forceFull && cachedLocal && now - lastPullCheckAt < 1500) {
+      // Cooldown 15 detik untuk pengunjung publik agar fokus tab berulang tidak menguras kuota Supabase
+      const cooldownMs = getAdminToken() ? 1500 : 15000;
+      if (!forceFull && cachedLocal && now - lastPullCheckAt < cooldownMs) {
         return cachedLocal;
       }
       lastPullCheckAt = now;
@@ -540,15 +627,23 @@
   }
 
   // ==========================================================================
-  // LIVE REALTIME SYNC ENGINE (Supabase WebSocket + Ultra-Light 2s Delta Check)
+  // LIVE REALTIME SYNC ENGINE
+  // - Dashboard Admin: Supabase Realtime WebSocket (dengan verifikasi phx_reply ok) + fallback polling
+  // - Frontend Pengunjung: Cek ringan updated_at (45 detik saat tab aktif, 0 koneksi WebSocket)
   // ==========================================================================
   let liveListeners = [];
   let liveStarted = false;
+  let publicSyncStarted = false;
   let realtimeWs = null;
+  let realtimeJoined = false;
+  let currentJoinRef = '';
+  let joinWatchdogTimer = null;
   let realtimeHeartbeat = null;
   let realtimeReconnectTimer = null;
   let fastPollTimer = null;
+  let publicPollTimer = null;
   let pollInFlight = false;
+  let lastDeltaCheckAt = 0;
 
   function notifyLiveListeners(cleanRemote, source) {
     if (!cleanRemote || Object.keys(cleanRemote).length === 0) return;
@@ -568,6 +663,13 @@
   async function checkCloudDelta(sourceTag) {
     if (pollInFlight || isSavingInFlight) return;
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    const now = Date.now();
+    // Cooldown ringan agar event bertumpuk tidak memicu request ganda
+    const minGap = getAdminToken() ? 1500 : 12000;
+    if (sourceTag !== 'realtime-connected' && sourceTag !== 'realtime-trigger' && (now - lastDeltaCheckAt < minGap)) {
+      return;
+    }
+    lastDeltaCheckAt = now;
     pollInFlight = true;
     try {
       const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -607,10 +709,16 @@
   }
 
   function connectSupabaseRealtime() {
+    // WebSocket Realtime HANYA diaktifkan untuk Dashboard Admin (hemat batas 200 koneksi Supabase Free)
+    if (!getAdminToken()) return;
     if (typeof WebSocket === 'undefined') return;
     if (realtimeWs && (realtimeWs.readyState === WebSocket.OPEN || realtimeWs.readyState === WebSocket.CONNECTING)) return;
 
     try {
+      realtimeJoined = false;
+      currentJoinRef = '';
+      if (joinWatchdogTimer) { clearTimeout(joinWatchdogTimer); joinWatchdogTimer = null; }
+
       const wsBase = SUPABASE_URL.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://');
       const wsUrl = `${wsBase}/realtime/v1/websocket?apikey=${encodeURIComponent(SUPABASE_KEY)}&vsn=1.0.0`;
       const ws = new WebSocket(wsUrl);
@@ -619,6 +727,7 @@
 
       ws.onopen = function () {
         try {
+          currentJoinRef = String(refCounter++);
           ws.send(JSON.stringify({
             topic: `realtime:public:${TABLE}:id=eq.1`,
             event: 'phx_join',
@@ -631,11 +740,21 @@
                 ]
               }
             },
-            ref: String(refCounter++)
+            ref: currentJoinRef
           }));
-        } catch (e) {}
 
-        checkCloudDelta('realtime-connected');
+          // Watchdog 8 detik: jika server tidak membalas phx_reply ok, tandai gagal join agar fallback polling aktif
+          if (joinWatchdogTimer) clearTimeout(joinWatchdogTimer);
+          joinWatchdogTimer = setTimeout(() => {
+            if (!realtimeJoined && realtimeWs === ws) {
+              realtimeJoined = false;
+              checkCloudDelta('join-timeout-fallback');
+            }
+          }, 8000);
+        } catch (e) {
+          realtimeJoined = false;
+        }
+
         if (realtimeHeartbeat) clearInterval(realtimeHeartbeat);
         realtimeHeartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -654,7 +773,27 @@
       ws.onmessage = function (evt) {
         try {
           const msg = JSON.parse(evt.data);
-          if (msg && msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
+          if (!msg) return;
+
+          // Verifikasi status phx_join secara eksplisit
+          if (msg.event === 'phx_reply' && String(msg.ref || '') === currentJoinRef) {
+            if (joinWatchdogTimer) { clearTimeout(joinWatchdogTimer); joinWatchdogTimer = null; }
+            if (msg.payload && msg.payload.status === 'ok') {
+              realtimeJoined = true;
+              checkCloudDelta('realtime-connected');
+            } else {
+              realtimeJoined = false;
+              checkCloudDelta('join-rejected-fallback');
+            }
+            return;
+          }
+
+          if (msg.event === 'phx_error' || msg.event === 'phx_close') {
+            realtimeJoined = false;
+            return;
+          }
+
+          if (msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
             const changeData = msg.payload.data;
             const rec = changeData.record || changeData.new;
             if (rec && rec.updated_at) {
@@ -677,20 +816,25 @@
       };
 
       ws.onclose = function () {
+        realtimeJoined = false;
+        if (joinWatchdogTimer) { clearTimeout(joinWatchdogTimer); joinWatchdogTimer = null; }
         if (realtimeHeartbeat) { clearInterval(realtimeHeartbeat); realtimeHeartbeat = null; }
-        realtimeWs = null;
+        if (realtimeWs === ws) realtimeWs = null;
         if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
         realtimeReconnectTimer = setTimeout(() => {
-          if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          if (getAdminToken() && (typeof document === 'undefined' || document.visibilityState === 'visible')) {
             connectSupabaseRealtime();
           }
-        }, 4000);
+        }, 5000);
       };
 
       ws.onerror = function () {
+        realtimeJoined = false;
         try { ws.close(); } catch (e) {}
       };
-    } catch (e) {}
+    } catch (e) {
+      realtimeJoined = false;
+    }
   }
 
   function startLiveSync(onRemoteData) {
@@ -700,40 +844,111 @@
     if (liveStarted) return;
     liveStarted = true;
 
-    connectSupabaseRealtime();
+    // Hanya jalankan WebSocket Realtime bila berada di sesi Admin
+    if (getAdminToken()) {
+      connectSupabaseRealtime();
 
-    // Cek ringan select=updated_at (~40 byte) HANYA jika WebSocket Realtime sedang tidak terhubung (hemat kuota Supabase Free)
-    if (fastPollTimer) clearInterval(fastPollTimer);
-    fastPollTimer = setInterval(() => {
-      const wsConnected = realtimeWs && realtimeWs.readyState === WebSocket.OPEN;
-      if (!wsConnected) {
-        checkCloudDelta('fast-poll-fallback');
+      // Fallback polling 5 detik jalan kapan pun channel belum benar-benar joined (bukan sekadar WS open)
+      if (fastPollTimer) clearInterval(fastPollTimer);
+      fastPollTimer = setInterval(() => {
+        const wsReadyAndJoined = realtimeJoined && realtimeWs && realtimeWs.readyState === WebSocket.OPEN;
+        if (!wsReadyAndJoined) {
+          checkCloudDelta('fast-poll-fallback');
+        }
+      }, 5000);
+
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            connectSupabaseRealtime();
+            checkCloudDelta('visibility');
+          }
+        });
       }
-    }, 5000);
+      if (typeof window !== 'undefined') {
+        window.addEventListener('online', () => {
+          connectSupabaseRealtime();
+          checkCloudDelta('online');
+        });
+      }
+    } else {
+      startPublicDeltaSync();
+    }
+  }
+
+  // Untuk halaman pengunjung publik: 0 koneksi WebSocket, cukup cek delta updated_at ringan tiap 45 detik saat tab aktif
+  function startPublicDeltaSync() {
+    if (publicSyncStarted || getAdminToken()) return;
+    publicSyncStarted = true;
+
+    if (publicPollTimer) clearInterval(publicPollTimer);
+    publicPollTimer = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        checkCloudDelta('public-delta');
+      }
+    }, 45000);
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-          connectSupabaseRealtime();
-          checkCloudDelta('visibility');
+          checkCloudDelta('public-visibility');
         }
       });
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
-        connectSupabaseRealtime();
-        checkCloudDelta('online');
+        checkCloudDelta('public-online');
       });
     }
   }
 
-  // Otomatis aktifkan sinkronisasi instan di seluruh halaman frontend pengunjung
   if (typeof window !== 'undefined') {
     setTimeout(() => {
       if (!getAdminToken()) {
-        startLiveSync();
+        startPublicDeltaSync();
       }
-    }, 450);
+    }, 1000);
+  }
+
+  // Riwayat Versi CMS (ambil 20 versi terakhir & pulihkan versi tertentu via RPC admin)
+  async function listCmsHistory() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/list_cms_history_secure`, {
+      method: 'POST',
+      headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ p_token: getAdminToken() })
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      const err = new Error('Gagal memuat riwayat versi (' + res.status + '): ' + msg.slice(0, 140));
+      err.status = msg.includes('UNAUTHORIZED') ? 401 : res.status;
+      throw err;
+    }
+    return await res.json();
+  }
+
+  async function restoreCmsVersion(historyId) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/restore_cms_version_secure`, {
+      method: 'POST',
+      headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        p_token: getAdminToken(),
+        p_history_id: Number(historyId)
+      })
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      const err = new Error('Gagal memulihkan versi (' + res.status + '): ' + msg.slice(0, 140));
+      err.status = msg.includes('UNAUTHORIZED') ? 401 : res.status;
+      throw err;
+    }
+    const restored = stripSensitiveForPublic(await res.json());
+    if (restored && restored.lastUpdated) {
+      lastKnownCloudTime = Number(restored.lastUpdated);
+    }
+    cache = restored;
+    cacheAt = Date.now();
+    setBaseCloudData(restored);
+    return restored;
   }
 
   // Kelola Akun Admin via Server-Side RPC (password tidak pernah dikirim balik ke klien)
@@ -895,34 +1110,25 @@
     }
   }
 
-  async function ping() {
-    const t0 = performance.now();
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=id&limit=1`, {
-      headers: BASE_HEADERS,
-      cache: 'no-store'
-    });
-    return { status: res.status, ms: Math.round(performance.now() - t0) };
-  }
-
   window.OhSnapCloud = {
     load,
     pullIfNewer,
     loginAdmin,
     logoutAdminSession,
     save,
+    listCmsHistory,
+    restoreCmsVersion,
     listAdmins,
     addAdmin,
     changeAdminPassword,
     deleteAdmin,
     upload,
     removeFile,
-    ping,
     escHtml,
     safeTitleHtml,
     safeUrl,
     stripSensitiveForPublic,
     getAdminToken,
-    getKnownCloudTime,
     setKnownCloudTime,
     setBaseCloudData,
     getBaseCloudData,
