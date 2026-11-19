@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'cms-cloud.js'
+      - '.github/workflows/check-cms-cloud-sync.yml'
   workflow_dispatch:
 
 jobs:
@@ -16,18 +17,19 @@ jobs:
 
       - name: Bandingkan checksum cms-cloud.js dengan repo pasangan
         run: |
-          LOCAL_HASH=$(sha256sum cms-cloud.js | awk '{print $1}')
+          LOCAL_HASH=$(tr -d '\r' < cms-cloud.js | sha256sum | awk '{print $1}')
           echo "SHA256 lokal cms-cloud.js: $LOCAL_HASH"
-          if [ "${{ github.event.repository.name }}" = "ohsnap-admin" ]; then
-            PAIR_URL="https://raw.githubusercontent.com/${{ github.repository_owner }}/ohsnap-frontend/main/cms-cloud.js"
+          if [ "${{ github.repository }}" = "${{ github.repository_owner }}/ohsnap-admin" ]; then
+            PAIR_REPO="ohsnap-frontend"
           else
-            PAIR_URL="https://raw.githubusercontent.com/${{ github.repository_owner }}/ohsnap-admin/main/cms-cloud.js"
+            PAIR_REPO="ohsnap-admin"
           fi
-          curl -sfL "$PAIR_URL" -o /tmp/pair-cms-cloud.js || { echo "Repo pasangan belum bisa diakses publik, melewati perbandingan."; exit 0; }
-          PAIR_HASH=$(sha256sum /tmp/pair-cms-cloud.js | awk '{print $1}')
-          echo "SHA256 pasangan cms-cloud.js: $PAIR_HASH"
+          PAIR_URL="https://api.github.com/repos/${{ github.repository_owner }}/${PAIR_REPO}/contents/cms-cloud.js?ref=main"
+          curl -sfL -H "Accept: application/vnd.github.raw+json" -H "X-GitHub-Api-Version: 2022-11-28" "$PAIR_URL" -o /tmp/pair-cms-cloud.js || { echo "Repo pasangan belum bisa diakses publik, melewati perbandingan."; exit 0; }
+          PAIR_HASH=$(tr -d '\r' < /tmp/pair-cms-cloud.js | sha256sum | awk '{print $1}')
+          echo "SHA256 pasangan (${PAIR_REPO}) cms-cloud.js: $PAIR_HASH"
           if [ "$LOCAL_HASH" != "$PAIR_HASH" ]; then
-            echo "::warning::cms-cloud.js berbeda dengan repo pasangan! Pastikan kedua repo memakai versi cms-cloud.js yang sama."
+            echo "::warning::cms-cloud.js berbeda dengan ${PAIR_REPO}! Pastikan kedua repo memakai versi cms-cloud.js yang sama."
             exit 1
           fi
           echo "cms-cloud.js identik di kedua repository."
