@@ -1144,7 +1144,12 @@
         err.code = 'PASSWORD_CHANGE_REQUIRED';
         err.status = 403;
       } else {
+        if (msg.includes('PASSWORD_CHANGE_REQUIRED')) {
+        err.code = 'PASSWORD_CHANGE_REQUIRED';
+        err.status = 403;
+      } else {
         err.status = msg.includes('UNAUTHORIZED') ? 401 : res.status;
+      }
       }
       throw err;
     }
@@ -1346,23 +1351,35 @@
       if (res.status === 404) {
         return { ok: true };
       }
-      if (!res.ok) {
-        return { ok: false, error: 'HTTP ' + res.status };
-      }
       const rawText = (await res.text()).trim();
+      let parsed = null;
       if (rawText) {
-        try {
-          const parsed = JSON.parse(rawText);
-          // Supabase Storage mengembalikan array kosong [] bila RLS menyembunyikan file dan tidak ada yang terhapus
-          if (Array.isArray(parsed) && parsed.length === 0) {
-            return { ok: false, error: 'File tidak terhapus di Storage (respons kosong).' };
+        try { parsed = JSON.parse(rawText); } catch (parseErr) {}
+      }
+      if (!res.ok) {
+        // Supabase Storage pada sebagian versi mengembalikan HTTP 400 dengan JSON statusCode "404" / "not_found" saat file sudah tidak ada
+        const bodyIsNotFound = Boolean(
+          parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+          (Number(parsed.statusCode) === 404 || /not[_\s-]?found/i.test(String(parsed.error || parsed.message || '')))
+        );
+        if (res.status === 400 && bodyIsNotFound) {
+          return { ok: true };
+        }
+        const errDetail = (parsed && typeof parsed === 'object' && (parsed.message || parsed.error))
+          ? String(parsed.message || parsed.error)
+          : ('HTTP ' + res.status);
+        return { ok: false, error: errDetail };
+      }
+      if (parsed !== null) {
+        // Supabase Storage mengembalikan array kosong [] bila RLS menyembunyikan file dan tidak ada yang terhapus
+        if (Array.isArray(parsed) && parsed.length === 0) {
+          return { ok: false, error: 'File tidak terhapus di Storage (respons kosong).' };
+        }
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          if (parsed.error || (Number(parsed.statusCode) >= 400 && Number(parsed.statusCode) !== 404)) {
+            return { ok: false, error: String(parsed.message || parsed.error || ('HTTP ' + parsed.statusCode)) };
           }
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            if (parsed.error || (Number(parsed.statusCode) >= 400 && Number(parsed.statusCode) !== 404)) {
-              return { ok: false, error: String(parsed.message || parsed.error || ('HTTP ' + parsed.statusCode)) };
-            }
-          }
-        } catch (parseErr) {}
+        }
       }
       return { ok: true };
     } catch (e) {
