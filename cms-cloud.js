@@ -97,6 +97,7 @@
   let lastPullCheckAt = 0;
   let saveQueue = Promise.resolve();
   let isSavingInFlight = false;
+  let pendingRemoteDuringSave = null;
 
   function deepClone(obj) {
     if (obj === null || obj === undefined) return obj;
@@ -181,17 +182,65 @@
     return v !== null && typeof v === 'object' && !Array.isArray(v);
   }
 
+  // Perbandingan struktural mendalam (tidak terpengaruh urutan properti objek & membedakan null vs undefined)
   function isEqualJson(a, b) {
     if (a === b) return true;
-    try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
+    if (a === null || b === null || a === undefined || b === undefined) return false;
+    if (typeof a !== typeof b) return false;
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (!isEqualJson(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    if (typeof a === 'object') {
+      const ka = Object.keys(a).filter(k => a[k] !== undefined);
+      const kb = Object.keys(b).filter(k => b[k] !== undefined);
+      if (ka.length !== kb.length) return false;
+      for (let i = 0; i < ka.length; i++) {
+        const k = ka[i];
+        if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+        if (!isEqualJson(a[k], b[k])) return false;
+      }
+      return true;
+    }
+    return false;
   }
 
-  function isUidObjectArray(arr) {
-    if (!Array.isArray(arr) || arr.length === 0) return false;
+  // True untuk array kosong [] maupun array objek yang seluruh item-nya memiliki _uid valid
+  function isUidOrEmptyArray(arr) {
+    if (!Array.isArray(arr)) return false;
     return arr.every(item => isPlainObject(item) && typeof item._uid === 'string' && item._uid.trim() !== '');
   }
 
-  // 3-Way Merge array berbasis _uid: aman untuk tambah bersamaan, hapus, edit field, dan ubah urutan tanpa duplikasi
+  // Hash deterministik sederhana (FNV-1a 32-bit) untuk migrasi _uid data legacy agar identik di semua perangkat
+  function stableHash32(str) {
+    let h = 0x811c9dc5;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(36);
+  }
+
+  function ensureStableItemUids(dataObj) {
+    if (!isPlainObject(dataObj)) return dataObj;
+    ['videos', 'studios', 'promos', 'frames', 'services', 'locations'].forEach(arrKey => {
+      if (Array.isArray(dataObj[arrKey])) {
+        dataObj[arrKey].forEach((item, idx) => {
+          if (isPlainObject(item) && (typeof item._uid !== 'string' || item._uid.trim() === '')) {
+            const fingerprint = arrKey + ':' + idx + ':' + (item.title || item.titleId || item.name || item.url || item.img || '');
+            item._uid = 'mig-' + arrKey + '-' + (idx + 1) + '-' + stableHash32(fingerprint);
+          }
+        });
+      }
+    });
+    return dataObj;
+  }
+
+  // 3-Way Merge array berbasis _uid: aman untuk array kosong [], tambah bersamaan, hapus semua, edit field, & ubah urutan
   function mergeUidArray(baseArr, remoteArr, localArr, preferLocalOnBothChanged) {
     const baseMap = new Map();
     const remoteMap = new Map();
@@ -226,9 +275,9 @@
             mergedMap.set(uid, deepClone(lItem));
           }
         }
-        // Jika dihapus di kedua perangkat -> tidak dimasukkan ke mergedMap
+        // Jika dihapus di kedua perangkat -> tidak masuk mergedMap
       } else {
-        // Item baru yang tidak ada di base
+        // Item baru yang tidak ada di base (tetap dipertahankan meski perangkat lain mengosongkan seluruh array!)
         if (inR && inL) {
           mergedMap.set(uid, deepMergeCMS(undefined, rItem, lItem, preferLocalOnBothChanged));
         } else if (inR) {
@@ -239,7 +288,6 @@
       }
     });
 
-    // Tentukan urutan akhir berdasarkan sisi mana yang mengubah urutan relatif item dari base
     const baseSurviving = baseArr.filter(x => x && x._uid && mergedMap.has(x._uid)).map(x => x._uid);
     const remoteSurvivingBase = remoteArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
     const localSurvivingBase = localArr.filter(x => x && x._uid && baseMap.has(x._uid) && mergedMap.has(x._uid)).map(x => x._uid);
@@ -284,11 +332,36 @@
     return result;
   }
 
-  // 3-Way Field-Level Merge: menggabungkan editan bersamaan dari beberapa device tanpa saling menimpa
+  // 3-Way Field-Level Merge: menggabungkan editan bersamaan (termasuk array kosong [], null base, & key terhapus)
   function deepMergeCMS(base, remote, local, preferLocalOnBothChanged) {
     if (isEqualJson(remote, local)) return deepClone(remote);
-    if (base === undefined || base === null) {
-      return deepClone(preferLocalOnBothChanged ? (local !== undefined ? local : remote) : (remote !== undefined ? remote : local));
+
+    // Key/nilai benar-benar baru (tidak ada di base)
+    if (base === undefined) {
+      if (remote === undefined) return deepClone(local);
+      if (local === undefined) return deepClone(remote);
+      if (Array.isArray(remote) && Array.isArray(local)) {
+        const hasAny = remote.length > 0 || local.length > 0;
+        if (hasAny && isUidOrEmptyArray(remote) && isUidOrEmptyArray(local)) {
+          return mergeUidArray([], remote, local, preferLocalOnBothChanged);
+        }
+        return deepClone(preferLocalOnBothChanged ? local : remote);
+      }
+      if (isPlainObject(remote) && isPlainObject(local)) {
+        const outNew = {};
+        const keysNew = new Set([...Object.keys(remote), ...Object.keys(local)]);
+        keysNew.forEach(k => {
+          if (k === 'admins' || k === 'resendOverrides') return;
+          if (k === 'lastUpdated') {
+            outNew[k] = Math.max(Number(remote.lastUpdated || 0), Number(local.lastUpdated || 0));
+            return;
+          }
+          const mv = deepMergeCMS(undefined, remote[k], local[k], preferLocalOnBothChanged);
+          if (mv !== undefined) outNew[k] = mv;
+        });
+        return outNew;
+      }
+      return deepClone(preferLocalOnBothChanged ? local : remote);
     }
 
     const localChanged = !isEqualJson(local, base);
@@ -297,13 +370,18 @@
     if (!localChanged) return deepClone(remote);
     if (!remoteChanged) return deepClone(local);
 
+    // Keduanya berubah terhadap base (termasuk kasus base === null atau salah satu jadi undefined/terhapus)
+    if (remote === undefined || local === undefined) {
+      return deepClone(preferLocalOnBothChanged ? local : remote);
+    }
+
     if (Array.isArray(remote) && Array.isArray(local)) {
       const baseArr = Array.isArray(base) ? base : [];
-      const hasUids = isUidObjectArray(remote) && isUidObjectArray(local) && (baseArr.length === 0 || isUidObjectArray(baseArr));
-      if (hasUids) {
+      const hasAnyElem = baseArr.length > 0 || remote.length > 0 || local.length > 0;
+      const allValidUidOrEmpty = isUidOrEmptyArray(baseArr) && isUidOrEmptyArray(remote) && isUidOrEmptyArray(local);
+      if (hasAnyElem && allValidUidOrEmpty) {
         return mergeUidArray(baseArr, remote, local, preferLocalOnBothChanged);
       }
-      // Fallback untuk array primitif/legacy tanpa _uid: pilih sisi sesuai preferensi agar tidak menduplikasi elemen
       return deepClone(preferLocalOnBothChanged ? local : remote);
     }
 
@@ -321,7 +399,11 @@
           out[k] = Math.max(Number(remote.lastUpdated || 0), Number(local.lastUpdated || 0));
           return;
         }
-        out[k] = deepMergeCMS(baseObj[k], remote[k], local[k], preferLocalOnBothChanged);
+        const mergedVal = deepMergeCMS(baseObj[k], remote[k], local[k], preferLocalOnBothChanged);
+        // Jangan tulis properti bernilai undefined agar key yang sengaja dihapus benar-benar hilang dari objek
+        if (mergedVal !== undefined) {
+          out[k] = mergedVal;
+        }
       });
       return out;
     }
@@ -382,7 +464,7 @@
       }
       const rows = await res.json();
       if (Array.isArray(rows) && rows[0] && rows[0].data && Object.keys(rows[0].data).length > 0) {
-        const cleanData = stripSensitiveForPublic(rows[0].data);
+        const cleanData = ensureStableItemUids(stripSensitiveForPublic(rows[0].data));
         if (rows[0].updated_at) {
           const dbTs = new Date(rows[0].updated_at).getTime();
           if (!cleanData.lastUpdated || dbTs > Number(cleanData.lastUpdated)) {
@@ -497,7 +579,7 @@
     return await res.json();
   }
 
-  // Logout Admin Server-Side: hapus sesi & izin storage di server sebelum keluar
+  // Logout Admin Server-Side: hapus sesi & izin storage di Supabase + bersihkan cache token di Apps Script
   async function logoutAdminSession(explicitToken) {
     const token = explicitToken || getAdminToken();
     if (!token) return;
@@ -509,11 +591,23 @@
         body: JSON.stringify({ p_token: token })
       });
     } catch (e) {}
+    try {
+      const chk = checkSheetUrl(SHEET_SCRIPT_URL);
+      if (chk.ok) {
+        await fetch(SHEET_SCRIPT_URL, {
+          method: 'POST',
+          keepalive: true,
+          credentials: 'omit',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'invalidateToken', token: token })
+        });
+      }
+    } catch (e) {}
   }
 
   // Simpan data CMS ke cloud secara berurutan (antrean mutex) dengan 3-Way Auto-Merge jika diedit bersamaan
-  function save(data, expectedMinTime, forceOverwrite) {
-    const localSnapshot = stripSensitiveForPublic(data);
+  function save(data, expectedMinTime, forceOverwrite, createSnapshot) {
+    const localSnapshot = ensureStableItemUids(stripSensitiveForPublic(data));
     delete localSnapshot.lastUpdated; // Server yang menentukan timestamp resmi
 
     const task = saveQueue.catch(() => {}).then(async () => {
@@ -549,7 +643,8 @@
               body: JSON.stringify({
                 p_token: token,
                 p_data: bodyObj,
-                p_expected_min_time: minTs
+                p_expected_min_time: minTs,
+                p_create_snapshot: Boolean(createSnapshot)
               }),
               signal: ctrl ? ctrl.signal : undefined
             });
@@ -604,6 +699,13 @@
             }
           }
 
+          if (errBody.includes('PASSWORD_CHANGE_REQUIRED:')) {
+            const pwErr = new Error('Akun Anda wajib mengganti password bawaan terlebih dahulu.');
+            pwErr.code = 'PASSWORD_CHANGE_REQUIRED';
+            pwErr.status = 403;
+            throw pwErr;
+          }
+
           if (errBody.includes('UNAUTHORIZED:')) {
             const authErr = new Error('Sesi login telah berakhir. Silakan login kembali.');
             authErr.status = 401;
@@ -620,6 +722,17 @@
         throw conflictErr;
       } finally {
         isSavingInFlight = false;
+        // Jika ada event Realtime dari perangkat lain yang masuk saat simpan berlangsung, proses segera!
+        if (pendingRemoteDuringSave) {
+          const deferred = pendingRemoteDuringSave;
+          pendingRemoteDuringSave = null;
+          const deferredTs = Number(deferred.lastUpdated || 0);
+          if (deferredTs > lastKnownCloudTime) {
+            setTimeout(() => {
+              notifyLiveListeners(deferred, 'realtime-deferred');
+            }, 0);
+          }
+        }
       }
     });
     saveQueue = task.catch(() => {});
@@ -805,8 +918,14 @@
                 const dbTs = new Date(rec.updated_at).getTime();
                 cleanRemote.lastUpdated = Math.max(Number(cleanRemote.lastUpdated || 0), dbTs);
               }
+              const normalizedRemote = ensureStableItemUids(cleanRemote);
               if (!isSavingInFlight) {
-                notifyLiveListeners(cleanRemote, 'realtime-ws');
+                notifyLiveListeners(normalizedRemote, 'realtime-ws');
+              } else {
+                const prevPendTs = Number((pendingRemoteDuringSave && pendingRemoteDuringSave.lastUpdated) || 0);
+                if (Number(normalizedRemote.lastUpdated || 0) >= prevPendTs) {
+                  pendingRemoteDuringSave = normalizedRemote;
+                }
               }
             } else {
               checkCloudDelta('realtime-trigger');
@@ -920,7 +1039,12 @@
     if (!res.ok) {
       const msg = await res.text();
       const err = new Error('Gagal memuat riwayat versi (' + res.status + '): ' + msg.slice(0, 140));
-      err.status = msg.includes('UNAUTHORIZED') ? 401 : res.status;
+      if (msg.includes('PASSWORD_CHANGE_REQUIRED')) {
+        err.code = 'PASSWORD_CHANGE_REQUIRED';
+        err.status = 403;
+      } else {
+        err.status = msg.includes('UNAUTHORIZED') ? 401 : res.status;
+      }
       throw err;
     }
     return await res.json();
@@ -949,6 +1073,16 @@
     cacheAt = Date.now();
     setBaseCloudData(restored);
     return restored;
+  }
+
+  async function debugLoginIp() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/debug_login_ip_secure`, {
+      method: 'POST',
+      headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ p_token: getAdminToken() })
+    });
+    if (!res.ok) throw new Error('Gagal cek diagnostik IP (' + res.status + ')');
+    return await res.json();
   }
 
   // Kelola Akun Admin via Server-Side RPC (password tidak pernah dikirim balik ke klien)
@@ -1133,6 +1267,8 @@
     setBaseCloudData,
     getBaseCloudData,
     deepMergeCMS,
+    ensureStableItemUids,
+    debugLoginIp,
     startLiveSync,
     checkSheetUrl,
     sheetFetch,

@@ -1,0 +1,50 @@
+name: Backup Otomatis Konten CMS (Snapshot Mingguan)
+
+on:
+  schedule:
+    # Setiap hari Minggu pukul 03:00 UTC (10:00 WIB)
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backup-cms-json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Tarik snapshot publik terbaru dari Supabase ke content-snapshot.json
+        run: |
+          SUPABASE_URL="https://kbkayevpbeijuuufnrgt.supabase.co"
+          SUPABASE_KEY="sb_publishable_AG1wxrYq1moobWYJjC6htQ_TB-Siffl"
+          curl -sfL "${SUPABASE_URL}/rest/v1/cms_settings?id=eq.1&select=data"             -H "apikey: ${SUPABASE_KEY}"             -H "Authorization: Bearer ${SUPABASE_KEY}"             -o /tmp/raw_cms.json
+          python3 - << 'PY'
+          import json
+          with open('/tmp/raw_cms.json', 'r', encoding='utf-8') as f:
+              rows = json.load(f)
+          if not isinstance(rows, list) or not rows or not isinstance(rows[0].get('data'), dict) or not rows[0]['data']:
+              raise SystemExit('Respons Supabase kosong, backup dilewati agar tidak menimpa snapshot.')
+          data = dict(rows[0]['data'])
+          data.pop('admins', None)
+          data.pop('resendOverrides', None)
+          with open('content-snapshot.json', 'w', encoding='utf-8') as out:
+              json.dump(data, out, indent=2, ensure_ascii=False)
+              out.write('
+')
+          print('content-snapshot.json berhasil diperbarui.')
+          PY
+
+      - name: Commit snapshot baru jika ada perubahan
+        run: |
+          if git diff --quiet content-snapshot.json; then
+            echo "Tidak ada perubahan konten sejak backup terakhir."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content-snapshot.json
+          git commit -m "chore: backup otomatis content-snapshot.json dari Supabase"
+          git push origin main

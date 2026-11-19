@@ -73,8 +73,12 @@
       .replace(/>/g, '&gt;');
   }
 
+  let lastAppliedCms = null;
+  let lastAppliedLang = '';
+
   function getActiveCms() {
     try {
+      if (lastAppliedCms) return lastAppliedCms;
       if (typeof window.cms !== 'undefined' && window.cms) return window.cms;
       const raw = localStorage.getItem('ohsnap_cms_data');
       return raw ? JSON.parse(raw) : null;
@@ -85,6 +89,7 @@
 
   function getActiveLang() {
     try {
+      if (lastAppliedLang) return lastAppliedLang;
       if (typeof window.currentLang === 'string' && window.currentLang) return window.currentLang;
       return (document.documentElement && document.documentElement.lang === 'en') ? 'en' : (localStorage.getItem('siteLang') || 'id');
     } catch (e) {
@@ -291,6 +296,8 @@
   }
 
   function applyOhSnapFooter(cmsObj, lang) {
+    if (cmsObj && typeof cmsObj === 'object') lastAppliedCms = cmsObj;
+    if (lang) lastAppliedLang = lang;
     const f = (cmsObj && cmsObj.footer && typeof cmsObj.footer === 'object') ? cmsObj.footer : {};
     const d = OHSNAP_DEFAULT_FOOTER;
     const isEn = (lang || getActiveLang()) === 'en';
@@ -353,13 +360,16 @@
     const nav = document.getElementById('navContainer');
     if (btn && nav && !btn.dataset.ohsnapBound) {
       btn.dataset.ohsnapBound = '1';
+      btn.setAttribute('aria-expanded', 'false');
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        nav.classList.toggle('active');
+        const isOpen = nav.classList.toggle('active');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
       document.addEventListener('click', (e) => {
         if (nav.classList.contains('active') && !nav.contains(e.target) && !btn.contains(e.target)) {
           nav.classList.remove('active');
+          btn.setAttribute('aria-expanded', 'false');
         }
       });
     }

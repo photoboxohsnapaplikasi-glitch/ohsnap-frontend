@@ -252,7 +252,7 @@
             <div class="footer-map-col">
                 <h4 id="fCardTitle" class="footer-map-heading" data-en="Find nearby OH SNAP! Studio:" data-id="Temukan Studio OH SNAP! Terdekat:">Temukan Studio OH SNAP! Terdekat:</h4>
                 <p id="fCardDesc" style="display:none;"></p>
-                <div class="footer-map-box" onclick="openNearestOhSnapGps(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openNearestOhSnapGps(event);}" role="button" tabindex="0" aria-label="Buka Google Maps Cabang OH SNAP! Terdekat via GPS">
+                <div class="footer-map-box" onclick="openNearestOhSnapGps(event)" role="button" tabindex="0" aria-label="Buka Google Maps Cabang OH SNAP! Terdekat via GPS">
                     <div class="footer-map-overlay-card">
                         <div class="map-card-title" id="footerNearestTitle">OH SNAP! Photobox</div>
                         <div class="map-card-sub" id="footerNearestSub" data-en="Click to route to nearest branch via GPS" data-id="Klik untuk rute cabang terdekat via GPS">Klik untuk rute cabang terdekat via GPS</div>
@@ -578,6 +578,12 @@
             } catch (e) {}
         }
 
+        window.addEventListener('ohsnap:cloud-updated', (ev) => {
+            if (ev && ev.detail && JSON.stringify(ev.detail) + '_' + currentLang !== lastRenderedSignature) {
+                cms = ev.detail;
+                applyCMS();
+            }
+        });
         window.addEventListener('storage', () => { syncLatestCMS(); });
         window.addEventListener('focus', () => { syncLatestCMS(); });
         syncLatestCMS();
