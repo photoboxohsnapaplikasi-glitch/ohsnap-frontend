@@ -507,8 +507,7 @@
             const btnRight = document.getElementById(rightBtnId);
             if (!btnLeft || !btnRight) return;
             const count = typeof totalItems === 'number' ? totalItems : (grid ? grid.children.length : 0);
-            const isOverflowing = grid ? (grid.scrollWidth > grid.clientWidth + 4) : false;
-            const show = count > minCols || isOverflowing;
+            const show = count > minCols;
             btnLeft.style.display = show ? 'flex' : 'none';
             btnRight.style.display = show ? 'flex' : 'none';
         }
