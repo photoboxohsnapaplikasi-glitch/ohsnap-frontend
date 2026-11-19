@@ -1343,8 +1343,26 @@
         method: 'DELETE',
         headers: BASE_HEADERS
       });
-      if (!res.ok && res.status !== 404) {
+      if (res.status === 404) {
+        return { ok: true };
+      }
+      if (!res.ok) {
         return { ok: false, error: 'HTTP ' + res.status };
+      }
+      const rawText = (await res.text()).trim();
+      if (rawText) {
+        try {
+          const parsed = JSON.parse(rawText);
+          // Supabase Storage mengembalikan array kosong [] bila RLS menyembunyikan file dan tidak ada yang terhapus
+          if (Array.isArray(parsed) && parsed.length === 0) {
+            return { ok: false, error: 'File tidak terhapus di Storage (respons kosong).' };
+          }
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            if (parsed.error || (Number(parsed.statusCode) >= 400 && Number(parsed.statusCode) !== 404)) {
+              return { ok: false, error: String(parsed.message || parsed.error || ('HTTP ' + parsed.statusCode)) };
+            }
+          }
+        } catch (parseErr) {}
       }
       return { ok: true };
     } catch (e) {
