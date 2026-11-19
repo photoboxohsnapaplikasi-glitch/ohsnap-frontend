@@ -1,4 +1,4 @@
-/* OH SNAP! - Klien Cloud Bersama (Supabase 1GB Storage & Global Sync Ready) */
+/* OH SNAP! - Klien Cloud Bersama (Supabase Realtime + 3-Way Multi-Device Instant Sync) */
 (function () {
   const SUPABASE_URL = 'https://kbkayevpbeijuuufnrgt.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_AG1wxrYq1moobWYJjC6htQ_TB-Siffl';
@@ -83,8 +83,16 @@
   };
 
   let cache = null, cacheAt = 0;
+  let baseCloudData = null;
   let lastKnownCloudTime = 0;
+  let lastKnownUpdatedAtIso = '';
   let saveQueue = Promise.resolve();
+  let isSavingInFlight = false;
+
+  function deepClone(obj) {
+    if (obj === null || obj === undefined) return obj;
+    return JSON.parse(JSON.stringify(obj));
+  }
 
   function escHtml(str) {
     if (str === null || str === undefined) return '';
@@ -125,7 +133,7 @@
 
   function stripSensitiveForPublic(dataObj) {
     if (!dataObj || typeof dataObj !== 'object') return dataObj;
-    const copy = JSON.parse(JSON.stringify(dataObj));
+    const copy = deepClone(dataObj);
     delete copy.admins;
     delete copy.resendOverrides;
     return copy;
@@ -144,9 +152,117 @@
     if (n > lastKnownCloudTime) lastKnownCloudTime = n;
   }
 
+  function setBaseCloudData(dataObj) {
+    if (dataObj && typeof dataObj === 'object') {
+      baseCloudData = stripSensitiveForPublic(dataObj);
+    }
+  }
+
+  function getBaseCloudData() {
+    return baseCloudData ? deepClone(baseCloudData) : null;
+  }
+
+  function isPlainObject(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  function isEqualJson(a, b) {
+    if (a === b) return true;
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
+  }
+
+  // 3-Way Field-Level Merge (CRDT/OT style): menggabungkan editan bersamaan dari 2 device tanpa saling menimpa
+  function deepMergeCMS(base, remote, local, preferLocalOnBothChanged) {
+    if (isEqualJson(remote, local)) return deepClone(remote);
+    if (base === undefined || base === null) {
+      return deepClone(preferLocalOnBothChanged ? (local !== undefined ? local : remote) : (remote !== undefined ? remote : local));
+    }
+
+    const localChanged = !isEqualJson(local, base);
+    const remoteChanged = !isEqualJson(remote, base);
+
+    if (!localChanged) return deepClone(remote);
+    if (!remoteChanged) return deepClone(local);
+
+    // Keduanya berubah: gabungkan secara rekursif per-field atau per-item array
+    if (Array.isArray(remote) && Array.isArray(local)) {
+      const baseArr = Array.isArray(base) ? base : [];
+      const minLen = Math.min(remote.length, local.length);
+      const mergedArr = [];
+      for (let i = 0; i < minLen; i++) {
+        mergedArr.push(deepMergeCMS(baseArr[i], remote[i], local[i], preferLocalOnBothChanged));
+      }
+      if (local.length > minLen && remote.length <= baseArr.length) {
+        for (let i = minLen; i < local.length; i++) mergedArr.push(deepClone(local[i]));
+      } else if (remote.length > minLen && local.length <= baseArr.length) {
+        for (let i = minLen; i < remote.length; i++) mergedArr.push(deepClone(remote[i]));
+      } else if (local.length > minLen && remote.length > minLen) {
+        for (let i = minLen; i < remote.length; i++) mergedArr.push(deepClone(remote[i]));
+        for (let i = minLen; i < local.length; i++) mergedArr.push(deepClone(local[i]));
+      }
+      return mergedArr;
+    }
+
+    if (isPlainObject(remote) && isPlainObject(local)) {
+      const baseObj = isPlainObject(base) ? base : {};
+      const out = {};
+      const allKeys = new Set([
+        ...Object.keys(baseObj),
+        ...Object.keys(remote),
+        ...Object.keys(local)
+      ]);
+      allKeys.forEach(k => {
+        if (k === 'admins' || k === 'resendOverrides') return;
+        if (k === 'lastUpdated') {
+          out[k] = Math.max(Number(remote.lastUpdated || 0), Number(local.lastUpdated || 0));
+          return;
+        }
+        out[k] = deepMergeCMS(baseObj[k], remote[k], local[k], preferLocalOnBothChanged);
+      });
+      return out;
+    }
+
+    // Leaf value diubah di kedua device pada detik yang sama
+    return deepClone(preferLocalOnBothChanged ? local : remote);
+  }
+
+  function applyLiveColorsToDocument(dataObj) {
+    try {
+      if (!dataObj || !dataObj.colors || typeof document === 'undefined') return;
+      const r = document.documentElement.style;
+      if (dataObj.colors.primary) r.setProperty('--primary', dataObj.colors.primary);
+      if (dataObj.colors.secondary) r.setProperty('--secondary', dataObj.colors.secondary);
+      if (dataObj.colors.bg) r.setProperty('--bg-main', dataObj.colors.bg);
+      if (dataObj.colors.footer) r.setProperty('--footer-bg', dataObj.colors.footer);
+    } catch (e) {}
+  }
+
+  function broadcastLocalStorageSync(publicClean) {
+    try {
+      const serialized = JSON.stringify(publicClean);
+      const prev = localStorage.getItem('ohsnap_cms_data');
+      localStorage.setItem('ohsnap_cms_data', serialized);
+      if (publicClean.lastUpdated) {
+        localStorage.setItem('ohsnap_cloud_synced_at', String(publicClean.lastUpdated));
+      }
+      if (prev !== serialized && typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'ohsnap_cms_data',
+            newValue: serialized,
+            oldValue: prev
+          }));
+        } catch (se) {
+          window.dispatchEvent(new Event('storage'));
+        }
+        window.dispatchEvent(new CustomEvent('ohsnap:cloud-updated', { detail: publicClean }));
+      }
+    } catch (e) {}
+  }
+
   // Ambil data CMS dari cloud dengan timeout 8 detik
   async function load(force) {
-    if (!force && cache && Date.now() - cacheAt < 4000) return cache;
+    if (!force && cache && Date.now() - cacheAt < 1200) return cache;
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
     try {
@@ -159,10 +275,15 @@
       const rows = await res.json();
       if (Array.isArray(rows) && rows[0] && rows[0].data && Object.keys(rows[0].data).length > 0) {
         cache = stripSensitiveForPublic(rows[0].data);
-        if (!cache.lastUpdated && rows[0].updated_at) {
-          cache.lastUpdated = new Date(rows[0].updated_at).getTime();
+        if (rows[0].updated_at) {
+          lastKnownUpdatedAtIso = String(rows[0].updated_at);
+          const dbTs = new Date(rows[0].updated_at).getTime();
+          if (!cache.lastUpdated || dbTs > Number(cache.lastUpdated)) {
+            cache.lastUpdated = Math.max(Number(cache.lastUpdated || 0), dbTs);
+          }
         }
         if (cache.lastUpdated) setKnownCloudTime(cache.lastUpdated);
+        if (!baseCloudData) setBaseCloudData(cache);
       } else {
         cache = null;
       }
@@ -176,7 +297,7 @@
   // Dipakai semua halaman frontend: ambil data terbaru dari cloud & bersihkan dari properti sensitif
   async function pullIfNewer() {
     try {
-      const remote = await load(true);
+      const remote = await load(false);
       if (!remote || Object.keys(remote).length === 0) return null;
       const publicClean = stripSensitiveForPublic(remote);
       const remoteTime = Number(remote.lastUpdated || 0);
@@ -223,12 +344,12 @@
     } catch (e) {}
   }
 
-  // Simpan data CMS ke cloud secara berurutan (antrean mutex) agar auto-save & klik Simpan tidak saling tabrakan
-  function save(data, expectedMinTime) {
+  // Simpan data CMS ke cloud secara berurutan (antrean mutex) dengan 3-Way Auto-Merge jika diedit bersamaan di device lain
+  function save(data, expectedMinTime, forceOverwrite) {
     if (expectedMinTime !== undefined && expectedMinTime !== null) {
       setKnownCloudTime(expectedMinTime);
     }
-    const snapshot = stripSensitiveForPublic(data);
+    const localSnapshot = stripSensitiveForPublic(data);
     const task = saveQueue.catch(() => {}).then(async () => {
       const token = getAdminToken();
       if (!token) {
@@ -236,45 +357,301 @@
         authErr.status = 401;
         throw authErr;
       }
-      const minTimeToUse = lastKnownCloudTime > 0 ? lastKnownCloudTime : Number(expectedMinTime || 0);
-      const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_cms_secure`, {
-        method: 'POST',
-        headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          p_token: token,
-          p_data: snapshot,
-          p_expected_min_time: minTimeToUse
-        })
-      });
 
-      if (rpcRes.ok) {
-        const savedData = await rpcRes.json();
-        if (savedData && savedData.lastUpdated) {
-          lastKnownCloudTime = Number(savedData.lastUpdated);
+      isSavingInFlight = true;
+      try {
+        let payloadToSend = localSnapshot;
+        let minTimeToUse = lastKnownCloudTime > 0 ? lastKnownCloudTime : Number(expectedMinTime || 0);
+        let mergedFromRemote = false;
+
+        if (forceOverwrite) {
+          try {
+            const latest = await load(true);
+            if (latest && latest.lastUpdated) {
+              minTimeToUse = Math.max(minTimeToUse, Number(latest.lastUpdated));
+              setKnownCloudTime(minTimeToUse);
+            }
+          } catch (e) {}
         }
-        cache = savedData;
-        cacheAt = Date.now();
-        return savedData;
-      }
 
-      const errBody = await rpcRes.text();
-      if (errBody.includes('CONFLICT:')) {
-        const conflictErr = new Error('Data di Cloud lebih baru (diubah oleh admin/perangkat lain). Muat ulang halaman terlebih dahulu.');
+        async function attemptRpcSave(bodyObj, minTs) {
+          const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const timer = ctrl ? setTimeout(() => ctrl.abort(), 14000) : null;
+          try {
+            return await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_cms_secure`, {
+              method: 'POST',
+              headers: Object.assign({}, BASE_HEADERS, { 'Content-Type': 'application/json' }),
+              body: JSON.stringify({
+                p_token: token,
+                p_data: bodyObj,
+                p_expected_min_time: minTs
+              }),
+              signal: ctrl ? ctrl.signal : undefined
+            });
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        }
+
+        // Hingga 3 percobaan otomatis jika ada device lain yang menyimpan di milidetik yang sama
+        for (let attempt = 0; attempt < 3; attempt++) {
+          let rpcRes;
+          try {
+            rpcRes = await attemptRpcSave(payloadToSend, minTimeToUse);
+          } catch (netErr) {
+            if (attempt < 2) {
+              await new Promise(r => setTimeout(r, 500));
+              continue;
+            }
+            throw netErr;
+          }
+
+          if (rpcRes.ok) {
+            const savedData = await rpcRes.json();
+            const cleanSaved = stripSensitiveForPublic(savedData);
+            if (cleanSaved && cleanSaved.lastUpdated) {
+              lastKnownCloudTime = Number(cleanSaved.lastUpdated);
+            }
+            cache = cleanSaved;
+            cacheAt = Date.now();
+            setBaseCloudData(cleanSaved);
+            if (mergedFromRemote && cleanSaved && typeof cleanSaved === 'object') {
+              try {
+                Object.defineProperty(cleanSaved, '_mergedFromRemote', { value: true, enumerable: false });
+              } catch (pe) {
+                cleanSaved._mergedFromRemote = true;
+              }
+            }
+            return cleanSaved;
+          }
+
+          const errBody = await rpcRes.text();
+          if (errBody.includes('CONFLICT:')) {
+            // Device lain baru saja menyimpan ke Cloud -> ambil data terbaru & lakukan 3-Way Field-Level Merge otomatis!
+            const latestRemote = await load(true);
+            if (latestRemote && Object.keys(latestRemote).length > 0) {
+              const baseline = baseCloudData || latestRemote;
+              payloadToSend = deepMergeCMS(baseline, latestRemote, payloadToSend, true);
+              payloadToSend.lastUpdated = Date.now();
+              minTimeToUse = Number(latestRemote.lastUpdated || Date.now());
+              setKnownCloudTime(minTimeToUse);
+              mergedFromRemote = true;
+              continue;
+            }
+          }
+
+          if (errBody.includes('UNAUTHORIZED:')) {
+            const authErr = new Error('Sesi login telah berakhir. Silakan login kembali.');
+            authErr.status = 401;
+            throw authErr;
+          }
+
+          const err = new Error('HTTP ' + rpcRes.status + ': ' + errBody.slice(0, 160));
+          err.status = rpcRes.status;
+          throw err;
+        }
+
+        const conflictErr = new Error('Sinkronisasi padat dari beberapa perangkat sekaligus. Coba simpan ulang.');
         conflictErr.code = 'CONFLICT';
         throw conflictErr;
+      } finally {
+        isSavingInFlight = false;
       }
-      if (errBody.includes('UNAUTHORIZED:')) {
-        const authErr = new Error('Sesi login telah berakhir. Silakan login kembali.');
-        authErr.status = 401;
-        throw authErr;
-      }
-
-      const err = new Error('HTTP ' + rpcRes.status + ': ' + errBody.slice(0, 160));
-      err.status = rpcRes.status;
-      throw err;
     });
     saveQueue = task.catch(() => {});
     return task;
+  }
+
+  // ==========================================================================
+  // LIVE REALTIME SYNC ENGINE (Supabase WebSocket + Ultra-Light 1.5s Check)
+  // ==========================================================================
+  let liveListeners = [];
+  let liveStarted = false;
+  let realtimeWs = null;
+  let realtimeHeartbeat = null;
+  let realtimeReconnectTimer = null;
+  let fastPollTimer = null;
+  let pollInFlight = false;
+
+  function notifyLiveListeners(cleanRemote, source) {
+    if (!cleanRemote || Object.keys(cleanRemote).length === 0) return;
+    const remoteTs = Number(cleanRemote.lastUpdated || 0);
+    if (remoteTs > 0) setKnownCloudTime(remoteTs);
+    cache = cleanRemote;
+    cacheAt = Date.now();
+    if (!getAdminToken()) {
+      applyLiveColorsToDocument(cleanRemote);
+      broadcastLocalStorageSync(cleanRemote);
+    }
+    liveListeners.forEach(fn => {
+      try { fn(cleanRemote, source); } catch (e) {}
+    });
+  }
+
+  async function checkCloudDelta(sourceTag) {
+    if (pollInFlight || isSavingInFlight) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    pollInFlight = true;
+    try {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), 5000) : null;
+      let res;
+      try {
+        res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.1&select=updated_at`, {
+          headers: BASE_HEADERS,
+          cache: 'no-store',
+          signal: ctrl ? ctrl.signal : undefined
+        });
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+      if (!res || !res.ok) return;
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows[0] || !rows[0].updated_at) return;
+
+      const remoteUpdatedAt = String(rows[0].updated_at);
+      const remoteUpdatedMs = new Date(remoteUpdatedAt).getTime();
+      const localSyncedAt = Number((typeof localStorage !== 'undefined' && localStorage.getItem('ohsnap_cloud_synced_at')) || 0);
+      const knownMax = Math.max(lastKnownCloudTime, getAdminToken() ? 0 : localSyncedAt);
+
+      if (remoteUpdatedAt !== lastKnownUpdatedAtIso && (remoteUpdatedMs > knownMax + 50 || !lastKnownUpdatedAtIso)) {
+        lastKnownUpdatedAtIso = remoteUpdatedAt;
+        if (remoteUpdatedMs > knownMax + 50) {
+          const freshData = await load(true);
+          if (freshData && Object.keys(freshData).length > 0) {
+            notifyLiveListeners(freshData, sourceTag || 'fast-poll');
+          }
+        }
+      }
+    } catch (e) {
+    } finally {
+      pollInFlight = false;
+    }
+  }
+
+  function connectSupabaseRealtime() {
+    if (typeof WebSocket === 'undefined') return;
+    if (realtimeWs && (realtimeWs.readyState === WebSocket.OPEN || realtimeWs.readyState === WebSocket.CONNECTING)) return;
+
+    try {
+      const wsBase = SUPABASE_URL.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://');
+      const wsUrl = `${wsBase}/realtime/v1/websocket?apikey=${encodeURIComponent(SUPABASE_KEY)}&vsn=1.0.0`;
+      const ws = new WebSocket(wsUrl);
+      realtimeWs = ws;
+      let refCounter = 1;
+
+      ws.onopen = function () {
+        try {
+          ws.send(JSON.stringify({
+            topic: `realtime:public:${TABLE}:id=eq.1`,
+            event: 'phx_join',
+            payload: {
+              config: {
+                broadcast: { self: false },
+                presence: { key: '' },
+                postgres_changes: [
+                  { event: 'UPDATE', schema: 'public', table: TABLE, filter: 'id=eq.1' }
+                ]
+              }
+            },
+            ref: String(refCounter++)
+          }));
+        } catch (e) {}
+
+        if (realtimeHeartbeat) clearInterval(realtimeHeartbeat);
+        realtimeHeartbeat = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({
+                topic: 'phoenix',
+                event: 'heartbeat',
+                payload: {},
+                ref: String(refCounter++)
+              }));
+            } catch (e) {}
+          }
+        }, 25000);
+      };
+
+      ws.onmessage = function (evt) {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg && msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
+            const changeData = msg.payload.data;
+            const rec = changeData.record || changeData.new;
+            if (rec && rec.updated_at) {
+              lastKnownUpdatedAtIso = String(rec.updated_at);
+            }
+            if (rec && rec.data && typeof rec.data === 'object' && Object.keys(rec.data).length > 0) {
+              const cleanRemote = stripSensitiveForPublic(rec.data);
+              if (rec.updated_at) {
+                const dbTs = new Date(rec.updated_at).getTime();
+                cleanRemote.lastUpdated = Math.max(Number(cleanRemote.lastUpdated || 0), dbTs);
+              }
+              if (!isSavingInFlight) {
+                notifyLiveListeners(cleanRemote, 'realtime-ws');
+              }
+            } else {
+              checkCloudDelta('realtime-trigger');
+            }
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = function () {
+        if (realtimeHeartbeat) { clearInterval(realtimeHeartbeat); realtimeHeartbeat = null; }
+        realtimeWs = null;
+        if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
+        realtimeReconnectTimer = setTimeout(() => {
+          if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+            connectSupabaseRealtime();
+          }
+        }, 4000);
+      };
+
+      ws.onerror = function () {
+        try { ws.close(); } catch (e) {}
+      };
+    } catch (e) {}
+  }
+
+  function startLiveSync(onRemoteData) {
+    if (typeof onRemoteData === 'function' && !liveListeners.includes(onRemoteData)) {
+      liveListeners.push(onRemoteData);
+    }
+    if (liveStarted) return;
+    liveStarted = true;
+
+    connectSupabaseRealtime();
+
+    if (fastPollTimer) clearInterval(fastPollTimer);
+    fastPollTimer = setInterval(() => {
+      checkCloudDelta('fast-poll');
+    }, 1500);
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          connectSupabaseRealtime();
+          checkCloudDelta('visibility');
+        }
+      });
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        connectSupabaseRealtime();
+        checkCloudDelta('online');
+      });
+    }
+  }
+
+  // Otomatis aktifkan sinkronisasi instan di seluruh halaman frontend pengunjung
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      if (!getAdminToken()) {
+        startLiveSync();
+      }
+    }, 450);
   }
 
   // Kelola Akun Admin via Server-Side RPC (password tidak pernah dikirim balik ke klien)
@@ -435,6 +812,10 @@
     getAdminToken,
     getKnownCloudTime,
     setKnownCloudTime,
+    setBaseCloudData,
+    getBaseCloudData,
+    deepMergeCMS,
+    startLiveSync,
     checkSheetUrl,
     sheetFetch,
     SHEET_URL: SHEET_SCRIPT_URL,
