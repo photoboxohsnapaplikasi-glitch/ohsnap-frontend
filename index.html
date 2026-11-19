@@ -320,9 +320,9 @@
             <p id="secStudioSub"></p>
         </div>
         <div class="slider-wrapper">
-            <button class="slider-btn slider-btn-left" onclick="scrollSlider('studioGrid', -1)">&#10094;</button>
+            <button type="button" id="btnStudioLeft" class="slider-btn slider-btn-left" style="display: none;" aria-label="Geser studio ke kiri" onclick="scrollSlider('studioGrid', -1)">&#10094;</button>
             <div id="studioGrid" class="slider-container"></div>
-            <button class="slider-btn slider-btn-right" onclick="scrollSlider('studioGrid', 1)">&#10095;</button>
+            <button type="button" id="btnStudioRight" class="slider-btn slider-btn-right" style="display: none;" aria-label="Geser studio ke kanan" onclick="scrollSlider('studioGrid', 1)">&#10095;</button>
         </div>
     </section>
 
@@ -333,9 +333,9 @@
             <p id="secPromoSub"></p>
         </div>
         <div class="slider-wrapper">
-            <button class="slider-btn slider-btn-left" onclick="scrollSlider('promoGrid', -1)">&#10094;</button>
+            <button type="button" id="btnPromoLeft" class="slider-btn slider-btn-left" style="display: none;" aria-label="Geser promo ke kiri" onclick="scrollSlider('promoGrid', -1)">&#10094;</button>
             <div id="promoGrid" class="slider-container"></div>
-            <button class="slider-btn slider-btn-right" onclick="scrollSlider('promoGrid', 1)">&#10095;</button>
+            <button type="button" id="btnPromoRight" class="slider-btn slider-btn-right" style="display: none;" aria-label="Geser promo ke kanan" onclick="scrollSlider('promoGrid', 1)">&#10095;</button>
         </div>
     </section>
 
@@ -346,9 +346,9 @@
             <p id="secVideoSub"></p>
         </div>
         <div class="slider-wrapper">
-            <button class="slider-btn slider-btn-left" onclick="scrollSlider('videoGrid', -1)">&#10094;</button>
+            <button type="button" id="btnVideoLeft" class="slider-btn slider-btn-left" style="display: none;" aria-label="Geser video ke kiri" onclick="scrollSlider('videoGrid', -1)">&#10094;</button>
             <div id="videoGrid" class="slider-container"></div>
-            <button class="slider-btn slider-btn-right" onclick="scrollSlider('videoGrid', 1)">&#10095;</button>
+            <button type="button" id="btnVideoRight" class="slider-btn slider-btn-right" style="display: none;" aria-label="Geser video ke kanan" onclick="scrollSlider('videoGrid', 1)">&#10095;</button>
         </div>
     </section>
 
@@ -499,6 +499,24 @@
             const container = document.getElementById(elementId);
             const scrollAmount = 260 * direction;
             container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+
+        function updateSliderButtons(gridId, leftBtnId, rightBtnId, minCols, totalItems) {
+            const grid = document.getElementById(gridId);
+            const btnLeft = document.getElementById(leftBtnId);
+            const btnRight = document.getElementById(rightBtnId);
+            if (!btnLeft || !btnRight) return;
+            const count = typeof totalItems === 'number' ? totalItems : (grid ? grid.children.length : 0);
+            const isOverflowing = grid ? (grid.scrollWidth > grid.clientWidth + 4) : false;
+            const show = count > minCols || isOverflowing;
+            btnLeft.style.display = show ? 'flex' : 'none';
+            btnRight.style.display = show ? 'flex' : 'none';
+        }
+
+        function updateAllHomeSliders(studioCount, promoCount, videoCount) {
+            updateSliderButtons('studioGrid', 'btnStudioLeft', 'btnStudioRight', 4, studioCount);
+            updateSliderButtons('promoGrid', 'btnPromoLeft', 'btnPromoRight', 3, promoCount);
+            updateSliderButtons('videoGrid', 'btnVideoLeft', 'btnVideoRight', 5, videoCount);
         }
 
         function attachAutoPauseListeners() {
@@ -698,6 +716,9 @@
                 document.querySelectorAll('#videoGrid .video-pause-link-btn').forEach(a => { a.textContent = btnText; });
             }
 
+            updateAllHomeSliders(studiosList.length, promosList.length, videosList.length);
+            requestAnimationFrame(() => updateAllHomeSliders(studiosList.length, promosList.length, videosList.length));
+
             applyOhSnapFooter(cms, currentLang);
             try { lastRenderedSignature = JSON.stringify(cms) + '_' + currentLang; } catch (e) {}
         }
@@ -749,6 +770,7 @@
                 setLanguage(currentLang);
             }
         });
+        window.addEventListener('resize', () => { updateAllHomeSliders(); });
         window.addEventListener('storage', () => { syncLatestCMS(); });
         window.addEventListener('focus', () => { syncLatestCMS(); });
         syncLatestCMS();
