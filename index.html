@@ -772,6 +772,7 @@
             }
         });
         window.addEventListener('resize', () => { updateAllHomeSliders(); });
+        window.addEventListener('load', () => updateAllHomeSliders());
         window.addEventListener('storage', () => { syncLatestCMS(); });
         window.addEventListener('focus', () => { syncLatestCMS(); });
         syncLatestCMS();
