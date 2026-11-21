@@ -501,21 +501,20 @@
             container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
 
-        function updateSliderButtons(gridId, leftBtnId, rightBtnId, minCols, totalItems) {
+        function updateSliderButtons(gridId, leftBtnId, rightBtnId) {
             const grid = document.getElementById(gridId);
             const btnLeft = document.getElementById(leftBtnId);
             const btnRight = document.getElementById(rightBtnId);
-            if (!btnLeft || !btnRight) return;
-            const count = typeof totalItems === 'number' ? totalItems : (grid ? grid.children.length : 0);
-            const show = count > minCols;
+            if (!grid || !btnLeft || !btnRight) return;
+            const show = grid.scrollWidth > grid.clientWidth + 2;
             btnLeft.style.display = show ? 'flex' : 'none';
             btnRight.style.display = show ? 'flex' : 'none';
         }
 
-        function updateAllHomeSliders(studioCount, promoCount, videoCount) {
-            updateSliderButtons('studioGrid', 'btnStudioLeft', 'btnStudioRight', 4, studioCount);
-            updateSliderButtons('promoGrid', 'btnPromoLeft', 'btnPromoRight', 3, promoCount);
-            updateSliderButtons('videoGrid', 'btnVideoLeft', 'btnVideoRight', 5, videoCount);
+        function updateAllHomeSliders() {
+            updateSliderButtons('studioGrid', 'btnStudioLeft', 'btnStudioRight');
+            updateSliderButtons('promoGrid', 'btnPromoLeft', 'btnPromoRight');
+            updateSliderButtons('videoGrid', 'btnVideoLeft', 'btnVideoRight');
         }
 
         function attachAutoPauseListeners() {
@@ -718,8 +717,8 @@
                 document.querySelectorAll('#videoGrid .video-pause-link-btn').forEach(a => { a.textContent = btnText; });
             }
 
-            updateAllHomeSliders(studiosList.length, promosList.length, videosList.length);
-            requestAnimationFrame(() => updateAllHomeSliders(studiosList.length, promosList.length, videosList.length));
+            updateAllHomeSliders();
+            requestAnimationFrame(() => updateAllHomeSliders());
 
             applyOhSnapFooter(cms, currentLang);
             try { lastRenderedSignature = JSON.stringify(cms) + '_' + currentLang; } catch (e) {}
