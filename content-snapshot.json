@@ -1,60 +1,272 @@
 {
   "colors": {
-    "primary": "#ff1493",
-    "secondary": "#2b4c7e",
     "bg": "#fff0f5",
-    "footer": "#18171d"
-  },
-  "banners": {
-    "home": {
-      "titleId": "LANGSUNG CETAK BAWA PULANG",
-      "titleEn": "INSTANT PRINT & TAKE IT HOME",
-      "subId": "Photobox & Self-Photo Studio kekinian.",
-      "subEn": "Trendy Photobox Studio.",
-      "imgUrl": ""
-    },
-    "about": {
-      "titleId": "About Our <span>Story</span>",
-      "titleEn": "About Our <span>Story</span>",
-      "subId": "OH SNAP! Photobox hadir dari semangat untuk mengabadikan setiap momen hangat, spontan, dan tak terlupakan bersama orang-orang tersayang.",
-      "subEn": "OH SNAP! Photobox was born from the spirit of capturing warm, spontaneous, and unforgettable moments with your favorite people.",
-      "btnId": "Read more \u2192",
-      "btnEn": "Read more \u2192",
-      "imgUrl": ""
-    },
-    "layanan": {
-      "titleId": "Layanan <span>Kami</span>",
-      "titleEn": "Our <span>Services</span>",
-      "subId": "Pilih paket sesi foto terbaik.",
-      "subEn": "Choose the best photo session package.",
-      "imgUrl": ""
-    },
-    "frame": {
-      "titleId": "Koleksi <span>Frame</span>",
-      "titleEn": "Exclusive <span>Frame</span>",
-      "subId": "Desain frame tematik yang selalu update setiap bulan!",
-      "subEn": "Thematic frame designs updated every month!",
-      "imgUrl": ""
-    },
-    "lokasi": {
-      "titleId": "Lokasi <span>Studio</span>",
-      "titleEn": "Our <span>Locations</span>",
-      "subId": "Kunjungi cabang terdekat kami di kotamu.",
-      "subEn": "Visit our nearest branch in your city.",
-      "imgUrl": ""
-    }
+    "footer": "#18171d",
+    "primary": "#ff1493",
+    "secondary": "#2b4c7e"
   },
   "footer": {
     "brand": "OH SNAP! Photobox Group",
-    "branches": "Kediri Mall Lt.5, Plaza Cilacap Lt.3, Laksana Baru Lt.3, Plaza Pekalongan Lt.2, Yogya Pemalang Lt.3",
-    "igName": "@ohsnap_photobox",
     "igUrl": "https://instagram.com/ohsnap_photobox",
-    "ttName": "@ohsnap_photobox",
     "ttUrl": "https://tiktok.com/@ohsnap_photobox",
-    "cardTitleId": "Temukan Studio OH SNAP! Terdekat:",
-    "cardTitleEn": "Find nearby OH SNAP! Studio:",
-    "cardDescId": "Temukan booth dan studio terdekat di kotamu untuk abadikan momen serumu hari ini!",
+    "igName": "@ohsnap_photobox",
+    "ttName": "@ohsnap_photobox",
+    "branches": "Kediri Mall Lt.5, Plaza Cilacap Lt.3, Laksana Baru Lt.3, Plaza Pekalongan Lt.2, Yogya Pemalang Lt.3",
+    "copyright": "© 2026 OH SNAP! Photobox. All rights reserved.",
     "cardDescEn": "Find the nearest booth and studio in your city to capture your special moments today!",
-    "copyright": "\u00a9 2026 OH SNAP! Photobox. All rights reserved."
-  }
+    "cardDescId": "Temukan booth dan studio terdekat di kotamu untuk abadikan momen serumu hari ini!",
+    "cardTitleEn": "Find nearby OH SNAP! Studio",
+    "cardTitleId": "Temukan OH SNAP! Studio"
+  },
+  "frames": [
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794216526443-l3px2hjd.jpg",
+      "_uid": "f725a400-e88a-407d-ac14-a17d88e75f3c",
+      "desc": "Nuansa hijau matcha segar & estetik",
+      "title": "Matcha Series Frame",
+      "category": "Special"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794216532022-zq481e04.jpg",
+      "_uid": "2420d81a-067d-46f5-8814-08809625bcec",
+      "desc": "Gaya klasik tahun 2000-an",
+      "title": "Retro Y2K Aesthetic",
+      "category": "Populer"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793675529282-bf49ey.jpg",
+      "_uid": "3942f9f3-4ce6-465a-9c3d-a8cbdf52cae2",
+      "desc": "Desain bersih dan elegan",
+      "title": "Minimalist Clean Strip",
+      "category": "Classic"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794193183543-d59u3qyr.jpg",
+      "_uid": "58a85f98-e7e2-47f7-938c-df651c82d4f9",
+      "desc": "Gaya neon futuristik yang keren",
+      "title": "Cyberpunk Neon Vibe",
+      "category": "Modern"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794193239803-9y5p45r1.jpg",
+      "_uid": "a825356d-2891-4475-b959-08106d4ca92b",
+      "desc": "Sentuhan bunga musim semi",
+      "title": "Floral Romantic Spring",
+      "category": "Exclusive"
+    }
+  ],
+  "promos": [
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794038443950-ra6b44.jpg",
+      "_uid": "56ea558c-de0a-42e8-84a0-f6c22a783e6d",
+      "desc": "Diskon spesial KTM aktif!",
+      "badge": "HOT PROMO",
+      "title": "Promo Pelajar & Mahasiswa"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793675588143-2pyxd6.jpg",
+      "_uid": "69d6a806-e283-43ca-b38b-8ea1c15d4b07",
+      "desc": "Cetak lebih banyak untuk geng.",
+      "badge": "BEST DEAL",
+      "title": "Paket Bundling Extra Print"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794216399872-d1gqfo4q.jpg",
+      "_uid": "7ffb5e0f-8786-43f4-bac8-1cbb6cd44cf9",
+      "desc": "test123 Potongan harga khusus.",
+      "badge": "LIMITED",
+      "title": "Weekend Flash Sale"
+    }
+  ],
+  "titles": {
+    "subFrameId": "Pilihan frame tematik untuk cetakan foto terbaikmu",
+    "subLayanan": "Pilih paket photobox dan studio favoritmu",
+    "subPromoEn": "Don't miss exciting offers at various OH SNAP! Photobox branches",
+    "subPromoId": "Jangan lewatkan penawaran menarik di berbagai cabang OH SNAP! Photobox",
+    "subVideoEn": "Video feed of our customers' fun moments in the photobox booth",
+    "subVideoId": "Video feed momen seru pelanggan kami di bilik photobox",
+    "subStudioEn": "Take a peek at the fun and aesthetics of our thematic booths across cities",
+    "subStudioId": "Intip keseruan dan estetika bilik tematik kami di berbagai kota",
+    "titleFrameId": "Koleksi Frame Eksklusif",
+    "titleLayanan": "Pilihan Paket Layanan",
+    "titlePromoEn": "This Month's Special Promo",
+    "titlePromoId": "Promo Spesial Bulan Ini",
+    "titleVideoEn": "Fun Moments with OH SNAP!",
+    "titleVideoId": "Keseruan Sobat OH SNAP!",
+    "titleStudioEn": "Studio & Booth Vibes",
+    "titleStudioId": "Suasana Studio & Booth"
+  },
+  "videos": [
+    {
+      "url": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/video/1794038110943-j9k561.mp4",
+      "_uid": "cd9c1382-9522-4c9a-beda-cc6883eecbf3",
+      "title": "Video 1",
+      "linkUrl": "",
+      "fileName": "WhatsApp Video 2026-11-07 at 14.52.57.mp4"
+    },
+    {
+      "url": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/video/1794216198029-06hvrq09.mp4",
+      "_uid": "1debac58-f267-4e70-b04b-c774ac6263ab",
+      "title": "Video 2",
+      "linkUrl": "https://www.instagram.com/reel/DVbGVJNk9yX/",
+      "fileName": "WhatsApp Video 2026-11-07 at 14.52.57.mp4"
+    },
+    {
+      "url": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/video/1794216209770-06eku191.mp4",
+      "_uid": "961bebc0-9d0f-4cc1-862d-e8b47ca6c474",
+      "title": "Video 3",
+      "linkUrl": "https://www.instagram.com/reel/DVbGVJNk9yX/",
+      "fileName": "WhatsApp Video 2026-11-07 at 14.52.57.mp4"
+    },
+    {
+      "url": "",
+      "_uid": "f5c1c44f-cf21-4c8d-8e5c-ea8b5f4cd564",
+      "thumb": "",
+      "title": "Video 4",
+      "linkUrl": "",
+      "fileName": "ssstik.io_1792948863607.mp4"
+    },
+    {
+      "url": "",
+      "_uid": "cbd0005e-f72c-45cb-9cc8-266667b142d0",
+      "thumb": "",
+      "title": "Video 5",
+      "linkUrl": "",
+      "fileName": "ssstik.io_1793274390418.mp4"
+    }
+  ],
+  "banners": {
+    "home": {
+      "subEn": " Trendy Photobox Studio.",
+      "subId": "Photobox & Self-Photo Studio kekinian.",
+      "imgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794195094153-xhfcnpwy.jpg",
+      "titleEn": "PRINT IT ON THE SPOT AND TAKE IT HOME",
+      "titleId": "LANGSUNG CETAK DAN BAWA PULANG",
+      "aboutImgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793686028641-w7ogj7.jpg"
+    },
+    "about": {
+      "btnEn": "Read more →",
+      "btnId": "Selengkapnya →",
+      "subEn": "In an era where time moves so rapidly,meaningful moments often slip away unnoticed.OH SNAP stands as your steadfast companion,helping you capture and preserve every precious moment of your life with unparalleled quality and aesthetics.",
+      "subId": "Di era di mana waktu bergerak begitu cepat,momen-momen berarti seringkali terlewatkan begitu saja.OH SNAP hadir sebagai sahabat setia yang membantu kamu untuk menangkap dan mengabadikan setiap momen berharga dalam hidup dengan kualitas dan estetika yang tak tertandingi.",
+      "fullEn": "In an era where time moves so rapidly,meaningful moments often slip away unnoticed.OH SNAP! stands as your steadfast companion,helping you capture and preserve every precious moment of your life with unparalleled quality and aesthetics.\n\nAt OH SNAP!,we believe that photography is more than just an image it is a medium for telling stories,expressing emotions,and celebrating togetherness.Every portrait we create is a work of art a blend of creativity and technical excellence designed specifically to craft lasting,deeply meaningful memories.\n\nThrough a personal yet professional approach,OH SNAP! is committed to providing an elegant and exclusive photography experience,tailored to your unique style and personality.We aspire for every moment you entrust to OH SNAP! to become an enduring emotional legacy.\n\nOH SNAP! is more than just a photography service it is a journey toward rediscovering the beauty within every moment of your life.",
+      "fullId": "Di era di mana waktu bergerak begitu cepat,momen-momen berarti seringkali terlewatkan begitu saja.OH SNAP! hadir sebagai sahabat setia yang membantu Kamu untuk menangkap dan mengabadikan setiap momen berharga dalam hidup dengan kualitas dan estetika yang tak tertandingi.\n\nOH SNAP! percaya,fotografi bukan sekadar gambar.melainkan medium untuk menceritakan kisah, mengekspresikan emosi, dan merayakan kebersamaan. Setiap potret yang kami hasilkan adalah wujud seni yang memadukan kreativitas dan keunggulan teknis,dirancang khusus untuk menghadirkan kenangan abadi yang penuh makna.\n\nDengan pendekatan yang personal dan profesional,OH SNAP! berkomitmen memberikan pengalaman fotografi yang elegan dan eksklusif,menyesuaikan dengan gaya dan kepribadian kamu.Kami ingin setiap momen yang kamu simpan bersama OH SNAP! menjadi warisan emosional yang tak lekang oleh waktu.\n\nOH SNAP! bukan sekadar layanan foto,tapi sebuah perjalanan untuk menemukan kembali keindahan dalam setiap momen hidup kamu.",
+      "imgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793686028641-w7ogj7.jpg",
+      "titleEn": "ABOUT OUR STORY",
+      "titleId": "CERITA KAMI"
+    },
+    "frame": {
+      "subEn": "Thematic frames.",
+      "subId": "Desain frame tematik yang selalu update setiap bulan!",
+      "imgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793685623319-zo605f.jpg",
+      "titleEn": "EXCLUSIVE FRAME",
+      "titleId": "KOLEKSI FRAME"
+    },
+    "lokasi": {
+      "subEn": "Visit branch.",
+      "subId": "Kunjungi cabang terdekat kami di kotamu.",
+      "imgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793685632590-mh18vw.jpg",
+      "titleEn": "OUR LOCATIONS",
+      "titleId": "LOKASI STUDIO"
+    },
+    "layanan": {
+      "subEn": "Choose package.",
+      "subId": "Pilih paket sesi foto terbaik.",
+      "imgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793685612683-utavef.jpg",
+      "titleEn": "OUR SERVICE",
+      "titleId": "LAYANAN KAMI"
+    }
+  },
+  "studios": [
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794037974167-aq54cn.jpg",
+      "_uid": "9b8d8d49-5f45-45aa-87ef-bda40158d02c",
+      "desc": "Desain kabin kereta estetik",
+      "title": "Booth Train Thematic"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794216342482-mjaeooj7.jpg",
+      "_uid": "32b130ba-7be8-411b-a978-524ef2ea9369",
+      "desc": "Nuansa lobi hotel & lift",
+      "title": "Booth Hotel & Elevator"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794216348029-zwrvowu7.jpg",
+      "_uid": "a4303d88-6301-464e-b9ac-4b15773102eb",
+      "desc": "Warna cerah penuh keceriaan",
+      "title": "Booth Claw & Pastel"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1795110660896-05rz1t9z.jpg",
+      "_uid": "b9b81339-031d-49f4-817d-ce041c1c5a92",
+      "desc": "Gaya minimalis modern",
+      "title": "Booth Portable Series"
+    }
+  ],
+  "services": [
+    {
+      "img": "",
+      "_uid": "41421862-cd89-4b97-beb3-79602d1b8099",
+      "price": "Rp 35.000",
+      "descId": "2 Strip Cetakan Foto + File Softcopy Digital + Bebas Pilih Frame",
+      "titleId": "Photobox Basic Strip"
+    },
+    {
+      "img": "",
+      "_uid": "6d587511-fd8b-4b31-8be7-9656593d2f10",
+      "price": "Rp 45.000",
+      "descId": "Muat hingga 6-8 orang + Cetakan 4R + Softcopy & GIF Boomerang",
+      "titleId": "Wide Angle / Big Box"
+    },
+    {
+      "img": "",
+      "_uid": "f75591b4-063d-403c-b050-e08a60f04278",
+      "price": "Rp 50.000",
+      "descId": "Sesi foto di booth tematik ikonik + Cetakan Premium + Semua File Digital",
+      "titleId": "Thematic Booth"
+    }
+  ],
+  "locations": [
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1795070738018-fsow0nk3.jpg",
+      "_uid": "23f74705-0325-4536-8359-3cb19e933bf0",
+      "name": "Kediri Mall",
+      "floor": "Lantai 5",
+      "hours": "10.00 - 22.00",
+      "mapUrl": "https://maps.google.com/?q=OH+SNAP+Photobox+Kediri+Mall"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793681017727-w2pmns.jpg",
+      "_uid": "1cd8c682-b41c-4fbf-bf55-f3e2e0916101",
+      "name": "Plaza Cilacap",
+      "floor": "Lantai 3",
+      "hours": "10.00 - 22.00",
+      "mapUrl": "https://maps.google.com/?q=OH+SNAP+Photobox+Plaza+Cilacap"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793687041608-qoxtaj.jpg",
+      "_uid": "09dfb3d2-e505-4229-82e1-c675b5018ffe",
+      "name": "Laksana Baru",
+      "floor": "Lantai 3",
+      "hours": "10.00 - 22.00",
+      "mapUrl": "https://maps.google.com/?q=OH+SNAP+Photobox+Laksana+Baru+Pekalongan"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793696014770-hfqw7m.jpg",
+      "_uid": "368a84a2-839f-4adf-9a7b-e096fb9af649",
+      "name": "Plaza Pekalongan",
+      "floor": "Lantai 2",
+      "hours": "10.00 - 22.00",
+      "mapUrl": "https://maps.google.com/?q=OH+SNAP+Photobox+Plaza+Pekalongan"
+    },
+    {
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793696025228-dovlrx.jpg",
+      "_uid": "4d8e0519-9145-446b-994f-3305187d8252",
+      "name": "Yogya Pemalang",
+      "floor": "Lantai 3",
+      "hours": "10.00 - 22.00",
+      "mapUrl": "https://maps.google.com/?q=OH+SNAP+Photobox+Yogya+Pemalang"
+    }
+  ],
+  "lastUpdated": 1795314393105
 }
