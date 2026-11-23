@@ -1090,6 +1090,9 @@
           connectSupabaseRealtime();
           checkCloudDelta('online');
         });
+        window.addEventListener('pageshow', e => {
+          if (e.persisted) checkCloudDelta('pageshow');
+        });
       }
     } else {
       startPublicDeltaSync();
@@ -1118,6 +1121,9 @@
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
         checkCloudDelta('public-online');
+      });
+      window.addEventListener('pageshow', e => {
+        if (e.persisted) checkCloudDelta('pageshow');
       });
     }
   }
