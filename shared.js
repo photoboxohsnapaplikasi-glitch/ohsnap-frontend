@@ -323,11 +323,24 @@
     const ttBot = document.getElementById('fTtBottom');
     if (ttBot) ttBot.href = safeTtUrl;
 
-    // Sinkronkan tombol media sosial di halaman Kontak jika tersedia
-    const cIg = document.getElementById('contactIgBtn');
-    if (cIg) { cIg.href = safeIgUrl; cIg.textContent = 'Instagram - ' + igName; }
-    const cTt = document.getElementById('contactTtBtn');
-    if (cTt) { cTt.href = safeTtUrl; cTt.textContent = 'TikTok - ' + ttName; }
+    // Sinkronkan tombol media sosial di halaman Kontak jika belum diatur terpisah di menu Kontak
+    const hasCustomContact = Boolean(cmsObj && cmsObj.contact && typeof cmsObj.contact === 'object');
+    if (!hasCustomContact) {
+      const cIg = document.getElementById('contactIgBtn');
+      if (cIg) {
+        cIg.href = safeIgUrl;
+        const lbl = cIg.querySelector('.social-label');
+        if (lbl) lbl.textContent = 'Instagram - ' + igName;
+        else cIg.textContent = 'Instagram - ' + igName;
+      }
+      const cTt = document.getElementById('contactTtBtn');
+      if (cTt) {
+        cTt.href = safeTtUrl;
+        const lbl = cTt.querySelector('.social-label');
+        if (lbl) lbl.textContent = 'TikTok - ' + ttName;
+        else cTt.textContent = 'TikTok - ' + ttName;
+      }
+    }
 
     const rawTitleId = val(f.cardTitleId, '');
     const rawTitleEn = val(f.cardTitleEn, '');
