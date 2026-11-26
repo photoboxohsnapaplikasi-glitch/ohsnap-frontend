@@ -24,6 +24,7 @@
       "_uid": "f725a400-e88a-407d-ac14-a17d88e75f3c",
       "desc": "Nuansa hijau matcha segar & estetik",
       "title": "Matcha Series Frame",
+      "descEn": "",
       "category": "Special"
     },
     {
@@ -98,24 +99,27 @@
   },
   "videos": [
     {
-      "url": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/video/1794038110943-j9k561.mp4",
+      "url": "",
       "_uid": "cd9c1382-9522-4c9a-beda-cc6883eecbf3",
+      "thumb": "",
       "title": "Video 1",
       "linkUrl": "",
-      "fileName": "WhatsApp Video 2026-11-07 at 14.52.57.mp4"
+      "fileName": "ssstik.io_1795415962130.mp4"
     },
     {
-      "url": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/video/1794216198029-06hvrq09.mp4",
+      "url": "",
       "_uid": "1debac58-f267-4e70-b04b-c774ac6263ab",
+      "thumb": "",
       "title": "Video 2",
-      "linkUrl": "https://www.instagram.com/reel/DVbGVJNk9yX/",
-      "fileName": "WhatsApp Video 2026-11-07 at 14.52.57.mp4"
+      "linkUrl": "",
+      "fileName": "ssstik.io_1795415962130.mp4"
     },
     {
-      "url": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/video/1794216209770-06eku191.mp4",
+      "url": "",
       "_uid": "961bebc0-9d0f-4cc1-862d-e8b47ca6c474",
+      "thumb": "",
       "title": "Video 3",
-      "linkUrl": "https://www.instagram.com/reel/DVbGVJNk9yX/",
+      "linkUrl": "",
       "fileName": "WhatsApp Video 2026-11-07 at 14.52.57.mp4"
     },
     {
@@ -140,7 +144,7 @@
       "subEn": " Trendy Photobox Studio.",
       "subId": "Photobox & Self-Photo Studio kekinian.",
       "imgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794195094153-xhfcnpwy.jpg",
-      "titleEn": "PRINT IT ON THE SPOT AND TAKE IT HOME",
+      "titleEn": "PRINT ON THE SPOT AND TAKE IT HOME",
       "titleId": "LANGSUNG CETAK DAN BAWA PULANG",
       "aboutImgUrl": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1793686028641-w7ogj7.jpg"
     },
@@ -177,6 +181,16 @@
       "titleId": "LAYANAN KAMI"
     }
   },
+  "contact": {
+    "igUrl": "https://instagram.com/ohsnap_photobox",
+    "ttUrl": "https://tiktok.com/@ohsnap_photobox",
+    "waUrl": "https //wa.me/088228727469",
+    "igName": "Instagram - @ohsnap_photobox",
+    "ttName": "TikTok - @ohsnap_photobox",
+    "waName": "Whatsapps - ohsnap_photobox",
+    "emailUrl": "photoboxohsnap.aplikasi@gmail.com",
+    "emailName": "Email - @ohsnap_photobox"
+  },
   "studios": [
     {
       "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1794037974167-aq54cn.jpg",
@@ -197,10 +211,18 @@
       "title": "Booth Claw & Pastel"
     },
     {
-      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1795110660896-05rz1t9z.jpg",
+      "img": "https://kbkayevpbeijuuufnrgt.supabase.co/storage/v1/object/public/ohsnap-media/img/1795402301676-11b2kcvn.webp",
       "_uid": "b9b81339-031d-49f4-817d-ce041c1c5a92",
       "desc": "Gaya minimalis modern",
       "title": "Booth Portable Series"
+    },
+    {
+      "img": "",
+      "_uid": "5f4677b7-b938-401d-b844-816006266bf7",
+      "desc": "",
+      "title": "Studio Baru",
+      "descEn": "",
+      "titleEn": ""
     }
   ],
   "services": [
@@ -268,5 +290,5 @@
       "mapUrl": "https://maps.google.com/?q=OH+SNAP+Photobox+Yogya+Pemalang"
     }
   ],
-  "lastUpdated": 1795314393105
+  "lastUpdated": 1795680066518
 }
