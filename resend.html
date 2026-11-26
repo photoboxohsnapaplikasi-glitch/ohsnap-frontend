@@ -536,6 +536,7 @@
 
 
         function applyCMS() {
+            initTurnstileWidget();
             if (!cms) return;
             if (cms.colors) {
                 document.documentElement.style.setProperty('--primary', cms.colors.primary || '#ff1493');
@@ -555,7 +556,6 @@
                 }
             }
             applyOhSnapFooter(cms, currentLang);
-            initTurnstileWidget();
             try { lastRenderedSignature = JSON.stringify(cms) + '_' + currentLang; } catch (e) {}
         }
 
