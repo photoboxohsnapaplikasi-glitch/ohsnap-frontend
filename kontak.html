@@ -258,16 +258,37 @@
         try { cms = JSON.parse(localStorage.getItem('ohsnap_cms_data')); } catch (e) {}
         let lastRenderedSignature = '';
 
+        const IS_MOBILE_DEVICE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // Di desktop, link wa.me / api.whatsapp.com diarahkan langsung ke WhatsApp Web (tanpa halaman perantara "Open app")
+        function toWaWebForDesktop(url) {
+            if (IS_MOBILE_DEVICE) return url;
+            try {
+                const u = new URL(url);
+                let phone = '';
+                if (u.hostname === 'wa.me') phone = u.pathname.replace(/\D/g, '');
+                else if (u.hostname === 'api.whatsapp.com' && /^\/send\/?$/.test(u.pathname)) phone = (u.searchParams.get('phone') || '').replace(/\D/g, '');
+                if (phone.length < 8) return url;
+                let out = 'https://web.whatsapp.com/send?phone=' + phone;
+                const text = u.searchParams.get('text');
+                if (text) out += '&text=' + encodeURIComponent(text);
+                return out;
+            } catch (e) {
+                return url;
+            }
+        }
+
         function normalizeWaHref(rawVal) {
             const raw = String(rawVal || '').trim();
             if (!raw || raw === '#') return '#';
             if (/^https?:\/\//i.test(raw)) {
-                return window.OhSnapCloud ? OhSnapCloud.safeUrl(raw, '#') : raw;
+                const safeRaw = window.OhSnapCloud ? OhSnapCloud.safeUrl(raw, '#') : raw;
+                return safeRaw === '#' ? safeRaw : toWaWebForDesktop(safeRaw);
             }
             const digits = raw.replace(/\D/g, '');
             if (digits.length >= 8) {
                 const formatted = digits.startsWith('0') ? ('62' + digits.slice(1)) : (digits.startsWith('8') ? ('62' + digits) : digits);
-                return 'https://wa.me/' + formatted;
+                return toWaWebForDesktop('https://wa.me/' + formatted);
             }
             return '#';
         }
