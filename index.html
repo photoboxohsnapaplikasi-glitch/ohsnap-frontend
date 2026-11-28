@@ -129,7 +129,7 @@
             display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255, 182, 193, 0.15);
         }
         .empty-portrait-video {
-            width: 100%; height: 480px; background: #ffffff; border: 2px solid #fbcfe8; border-radius: 24px;
+            width: 100%; aspect-ratio: 9 / 16; background: #ffffff; border: 2px solid #fbcfe8; border-radius: 24px;
             display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(255, 182, 193, 0.18);
         }
 
@@ -160,7 +160,7 @@
 
         .slide-item-studio { flex: 0 0 calc((100% - 32px) / 3); min-width: 280px; }
         .slide-item-promo { flex: 0 0 calc((100% - 32px) / 3); min-width: 280px; }
-        .slide-item-video { flex: 0 0 calc((100% - 64px) / 5); min-width: 195px; }
+        .slide-item-video { flex: 0 0 calc((100% - 48px) / 4); min-width: 220px; }
 
         .slider-btn {
             position: absolute;
@@ -259,7 +259,7 @@
 
         /* Tombol Link saat Video Dipause/Stop & Proteksi Download */
         .video-card-wrap {
-            position: relative; width: 100%; height: 480px; border-radius: 24px; overflow: hidden;
+            position: relative; width: 100%; aspect-ratio: 9 / 16; border-radius: 24px; overflow: hidden;
         }
         .video-pause-link-btn {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -469,8 +469,7 @@
                 { title: 'Video 1', url: '' },
                 { title: 'Video 2', url: '' },
                 { title: 'Video 3', url: '' },
-                { title: 'Video 4', url: '' },
-                { title: 'Video 5', url: '' }
+                { title: 'Video 4', url: '' }
             ],
             promos: [
                 { title: 'Promo Pelajar & Mahasiswa', badge: 'HOT PROMO', desc: 'Diskon spesial KTM aktif!', img: '' },
@@ -724,7 +723,7 @@
                         if (safeVidUrl && (isTikTok || isIg)) {
                             let platformName = isTikTok ? 'TikTok' : 'Instagram';
                             const finalSocialUrl = safeTargetLink || safeVidUrl;
-                            mediaContent = `<div style="position:relative; width:100%; height:480px; border-radius:24px; border:2px solid #fbcfe8; overflow:hidden; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+                            mediaContent = `<div style="position:relative; width:100%; aspect-ratio:9/16; border-radius:24px; border:2px solid #fbcfe8; overflow:hidden; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
                                 <div style="position:absolute; inset:0; background:linear-gradient(135deg, #2b4c7e 0%, #ff1493 100%); opacity:0.85;"></div>
                                 <div style="position:relative; z-index:2; padding:20px; display:flex; flex-direction:column; align-items:center; gap:14px;">
                                     <div style="width:60px; height:60px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.5rem; box-shadow:0 6px 20px rgba(0,0,0,0.4);">▶</div>
@@ -736,7 +735,7 @@
                             const safeThumb = (v && v.thumb) ? OhSnapCloud.safeUrl(String(v.thumb).trim(), '') : '';
                             const fallbackSvgPoster = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2318171d'/%3E%3Cstop offset='55%25' stop-color='%232b4c7e'/%3E%3Cstop offset='100%25' stop-color='%23ff1493'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='360' height='640' fill='url(%23g)'/%3E%3Ctext x='180' y='88' text-anchor='middle' fill='%23ffffff' fill-opacity='0.88' font-family='sans-serif' font-size='22' font-weight='800' letter-spacing='2'%3EOH SNAP!%3C/text%3E%3Ctext x='180' y='565' text-anchor='middle' fill='%23ffffff' fill-opacity='0.8' font-family='sans-serif' font-size='15' font-weight='600'%3ETekan Play untuk memutar%3C/text%3E%3C/svg%3E";
                             const posterSrc = safeThumb || fallbackSvgPoster;
-                            mediaContent = `<div class="video-card-wrap"><video class="auto-pause-video" src="${escHtml(safeVidUrl)}" poster="${escHtml(posterSrc)}" preload="none" controls controlsList="nodownload" oncontextmenu="return false;" playsinline loop style="width: 100%; height: 480px; object-fit: cover; border-radius: 24px; border: 2px solid #fbcfe8; background:#18171d;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-video\\'></div>'"></video>${pauseOverlayHtml}</div>`;
+                            mediaContent = `<div class="video-card-wrap"><video class="auto-pause-video" src="${escHtml(safeVidUrl)}" poster="${escHtml(posterSrc)}" preload="none" controls controlsList="nodownload" oncontextmenu="return false;" playsinline loop style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 24px; border: 2px solid #fbcfe8; background:#18171d;" onerror="this.parentElement.outerHTML='<div class=\\'empty-portrait-video\\'></div>'"></video>${pauseOverlayHtml}</div>`;
                         }
                     }
                     return `<div class="slide-item-video">${mediaContent}</div>`;
