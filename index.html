@@ -190,6 +190,8 @@
         .card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .badge-tag { display: inline-block; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 12px; border-radius: 50px; margin-bottom: 10px; width: fit-content; }
         .card-body h3 { font-size: 1.2rem; font-weight: 700; color: var(--secondary); margin-bottom: 8px; }
+        .card-body h3 a.cms-promo-link { color: inherit; text-decoration: none; }
+        .card-body h3 a.cms-promo-link:hover, .card-body h3 a.cms-promo-link:focus-visible { text-decoration: underline; }
         .card-body p { font-size: 0.92rem; color: #4b5563; }
 
         footer { background-color: var(--footer-bg); color: #d1d5db; padding: 65px 6% 28px; border-top: 2px solid #fbcfe8; margin-top: 60px; }
@@ -503,6 +505,23 @@
         let lastRenderedSignature = '';
         let lastStudioSig = '';
         let lastPromoSig = '';
+
+        // Link judul promo (opsional, diisi dari admin). Kosong/tidak valid = teks biasa (tidak bisa diklik).
+        function getPromoLink(p) {
+            let u = String((p && p.linkUrl) || '').trim();
+            if (!u) return '';
+            if (!/^[a-z][a-z0-9+.\-]*:/i.test(u) && /^[^\s\/]+\.[^\s]{2,}/.test(u)) u = 'https://' + u;
+            const safe = OhSnapCloud.safeUrl(u, '');
+            return /^https?:\/\//i.test(safe) ? safe : '';
+        }
+        function promoTitleHtml(p, isEn) {
+            const text = escHtml(isEn ? (p.titleEn || p.title || 'Promo Title') : (p.title || 'Judul Promo'));
+            const href = getPromoLink(p);
+            if (!href) return text;
+            let external = true;
+            try { external = new URL(href, window.location.href).origin !== window.location.origin; } catch (e) {}
+            return `<a class="cms-promo-link" href="${escHtml(href)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${text}</a>`;
+        }
         let lastVideoSig = '';
 
         function scrollSlider(elementId, direction) {
@@ -657,7 +676,7 @@
                             <div class="card-body">
                                 <div>
                                     <span class="badge-tag">${escHtml(p.badge || 'PROMO')}</span>
-                                    <h3 class="cms-promo-title">${escHtml(isEn ? (p.titleEn || p.title || 'Promo Title') : (p.title || 'Judul Promo'))}</h3>
+                                    <h3 class="cms-promo-title">${promoTitleHtml(p, isEn)}</h3>
                                     <p class="cms-promo-desc">${escHtml(isEn ? (p.descEn || p.desc || 'Promo description') : (p.desc || 'Keterangan promo'))}</p>
                                 </div>
                             </div>
@@ -669,7 +688,10 @@
                 const titles = promoGridEl.querySelectorAll('.cms-promo-title');
                 const descs = promoGridEl.querySelectorAll('.cms-promo-desc');
                 promosList.forEach((p, i) => {
-                    if (titles[i]) titles[i].textContent = isEn ? (p.titleEn || p.title || 'Promo Title') : (p.title || 'Judul Promo');
+                    if (titles[i]) {
+                        const titleTarget = titles[i].querySelector('a.cms-promo-link') || titles[i];
+                        titleTarget.textContent = isEn ? (p.titleEn || p.title || 'Promo Title') : (p.title || 'Judul Promo');
+                    }
                     if (descs[i]) descs[i].textContent = isEn ? (p.descEn || p.desc || 'Promo description') : (p.desc || 'Keterangan promo');
                 });
             }
